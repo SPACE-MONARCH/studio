@@ -1,14 +1,19 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { AlertCircle, Zap, Plus, Circle, Square, Trash2, GitPullRequest, GitCommit, Shuffle } from 'lucide-react';
+import { AlertCircle, Zap, Plus, Circle, Square, Trash2, GitPullRequest, GitCommit, Shuffle, Sparkles, Bot, Loader2, ShieldCheck } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  generateRagScenario,
+  type GenerateRagScenarioOutput,
+} from '@/ai/flows/generate-rag-scenario';
+
 
 type NodeType = 'process' | 'resource';
 interface Node {
@@ -32,6 +37,8 @@ export default function RAGSimulatorPage() {
   const [edgeType, setEdgeType] = useState<EdgeType>('request');
   const [deadlockPath, setDeadlockPath] = useState<string[]>([]);
   const [detectionResult, setDetectionResult] = useState<'deadlock' | 'safe' | null>(null);
+  const [isGenerating, setIsGenerating] = useState<false | 'random' | 'deadlocked' | 'safe'>(false);
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
   
   const processCount = nodes.filter(n => n.type === 'process').length;
   const resourceCount = nodes.filter(n => n.type === 'resource').length;
@@ -136,23 +143,35 @@ export default function RAGSimulatorPage() {
     setDeadlockPath([]);
     setSelectedNode(null);
     setDetectionResult(null);
+    setAiExplanation(null);
   };
   
-  const generateRandomGraph = () => {
+  const handleGenerateScenario = async (type: 'random' | 'deadlocked' | 'safe') => {
     clearAll();
-    const newNodes: Node[] = [
-      { id: 'p0', type: 'process', label: 'P0', position: { x: 20, y: 20 } },
-      { id: 'p1', type: 'process', label: 'P1', position: { x: 80, y: 80 } },
-      { id: 'r0', type: 'resource', label: 'R0', position: { x: 80, y: 20 } },
-      { id: 'r1', type: 'resource', label: 'R1', position: { x: 20, y: 80 } },
-    ];
-    const newEdges: Edge[] = [
-      { id: 'e1', sourceId: 'p0', targetId: 'r0', type: 'request' },
-      { id: 'e2', sourceId: 'r0', targetId: 'p1', type: 'assignment' },
-      { id: 'e3', sourceId: 'p1', targetId: 'r1', type: 'request' },
-    ];
-    setNodes(newNodes);
-    setEdges(newEdges);
+    setIsGenerating(type);
+    try {
+      const result = await generateRagScenario({ type });
+      const newNodes: Node[] = result.nodes.map((n, i) => ({
+        id: n.label,
+        type: n.type,
+        label: n.label,
+        position: { x: Math.random() * 80 + 10, y: Math.random() * 80 + 10 },
+      }));
+      const newEdges: Edge[] = result.edges.map(e => ({
+        id: self.crypto.randomUUID(),
+        sourceId: e.sourceLabel,
+        targetId: e.targetLabel,
+        type: e.type,
+      }));
+      setNodes(newNodes);
+      setEdges(newEdges);
+      setAiExplanation(result.explanation);
+    } catch (error) {
+      console.error("AI scenario generation failed:", error);
+      setAiExplanation("Failed to generate a scenario. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
   
   return (
@@ -210,10 +229,7 @@ export default function RAGSimulatorPage() {
             
             <Button onClick={findDeadlock} className="w-full"><Zap className="mr-2 h-4 w-4" /> Find Deadlock</Button>
             
-            <div className="grid grid-cols-2 gap-2">
-                <Button onClick={generateRandomGraph} variant="secondary" className="w-full"><Shuffle className="mr-2 h-4 w-4" /> Random</Button>
-                <Button onClick={clearAll} variant="destructive" className="w-full"><Trash2 className="mr-2 h-4 w-4" /> Clear</Button>
-            </div>
+            <Button onClick={clearAll} variant="destructive" className="w-full"><Trash2 className="mr-2 h-4 w-4" /> Clear All</Button>
 
             {detectionResult && (
                  <Alert variant={detectionResult === 'deadlock' ? 'destructive' : 'default'} className={cn(detectionResult === 'safe' && 'border-green-500/50 bg-green-500/10 text-green-700')}>
@@ -226,6 +242,36 @@ export default function RAGSimulatorPage() {
             )}
 
           </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>AI Actions</CardTitle>
+            <CardDescription>Generate a graph state using AI.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+              <Button onClick={() => handleGenerateScenario('random')} disabled={!!isGenerating}>
+                {isGenerating === 'random' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                Generate Random
+              </Button>
+              <Button onClick={() => handleGenerateScenario('deadlocked')} disabled={!!isGenerating}>
+                {isGenerating === 'deadlocked' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <AlertCircle className="mr-2 h-4 w-4" />}
+                Generate Deadlock
+              </Button>
+              <Button onClick={() => handleGenerateScenario('safe')} disabled={!!isGenerating}>
+                {isGenerating === 'safe' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+                Generate Safe State
+              </Button>
+          </CardContent>
+          {aiExplanation && (
+            <CardFooter>
+              <Alert>
+                <Bot className="h-4 w-4" />
+                <AlertTitle>AI Explanation</AlertTitle>
+                <AlertDescription>{aiExplanation}</AlertDescription>
+              </Alert>
+            </CardFooter>
+          )}
         </Card>
       </div>
     </div>
