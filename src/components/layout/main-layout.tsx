@@ -79,18 +79,15 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 group-data-[collapsible=icon]:-ml-1">
+            <div className="flex items-center gap-2 group-data-[collapsible=icon]:-ml-1 group-data-[collapsible=icon]:hidden">
               <Button asChild variant="ghost" size="icon">
                 <Link href="/">
                   <Logo className="size-5 text-primary" />
                 </Link>
               </Button>
-              <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden">
+              <span className="font-semibold text-lg">
                 Deadlock Defender
               </span>
-            </div>
-            <div className="group-data-[collapsible=icon]:hidden">
-              <SidebarCollapse />
             </div>
           </div>
         </SidebarHeader>
@@ -125,11 +122,11 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter className="group-data-[collapsible=icon]:hidden">
+        {/* <SidebarFooter className="group-data-[collapsible=icon]:hidden">
           <div className="flex items-center justify-end">
             <SidebarCollapse />
           </div>
-        </SidebarFooter>
+        </SidebarFooter> */}
       </Sidebar>
       <SidebarInset
         className={cn(

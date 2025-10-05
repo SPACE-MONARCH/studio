@@ -13,16 +13,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Logo } from '@/components/icons/logo';
 import Link from 'next/link';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 export function Header() {
-  const isMobile = useIsMobile();
-
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
       <div className="flex items-center gap-2">
-        {isMobile && <SidebarTrigger />}
+        <SidebarTrigger />
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <Logo className="h-6 w-6 text-primary" />
           <span className="hidden sm:inline-block">Deadlock Defender</span>
