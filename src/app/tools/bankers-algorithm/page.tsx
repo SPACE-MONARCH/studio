@@ -188,8 +188,8 @@ export default function BankersAlgorithmPage() {
                 <div>
                   <h3 className="font-semibold mb-2">Available</h3>
                   <div className="flex gap-2">
-                    {available.map((_, j) => (
-                      <FormField key={j} control={form.control} name={`available.${j}`} render={({ field }) => (
+                    {available.map((field, j) => (
+                      <FormField key={field.id} control={form.control} name={`available.${j}`} render={({ field }) => (
                         <FormItem><FormControl><Input {...field} /></FormControl></FormItem>
                       )} />
                     ))}
@@ -304,11 +304,11 @@ const MatrixInput = ({ title, rows, form, name }: any) => (
   <div>
     <h3 className="font-semibold mb-2">{title}</h3>
     <div className="space-y-2">
-      {rows.map((_: any, i: number) => (
-        <div key={i} className="flex gap-2 items-center">
+      {rows.map((row: any, i: number) => (
+        <div key={row.id} className="flex gap-2 items-center">
           <span className="w-8 font-mono">P{i}</span>
-          {_.value.map((__: any, j: number) => (
-            <FormField key={j} control={form.control} name={`${name}.${i}.${j}`} render={({ field }) => (
+          {Object.keys(row).filter(k => k !== 'id').map((_, j) => (
+            <FormField key={`${row.id}-${j}`} control={form.control} name={`${name}.${i}.${j}`} render={({ field }) => (
               <FormItem><FormControl><Input {...field} /></FormControl></FormItem>
             )} />
           ))}
@@ -339,3 +339,5 @@ const MatrixDisplay = ({ title, data, highlightRow, status }: { title?: string, 
     </Table>
   </div>
 );
+
+    
