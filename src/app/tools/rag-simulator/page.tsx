@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
@@ -16,24 +17,25 @@ import {
 
 
 type NodeType = 'process' | 'resource';
-interface Node {
+export interface Node {
   id: string;
   type: NodeType;
   label: string;
   position: { x: number; y: number };
 }
 type EdgeType = 'request' | 'assignment';
-interface Edge {
+export interface Edge {
   id: string;
   sourceId: string;
   targetId: string;
   type: EdgeType;
 }
 
+const RagEdge = dynamic(() => import('@/components/rag-edge').then(mod => mod.RagEdge), { ssr: false });
+
 export default function RAGSimulatorPage() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
-  const [renderedEdges, setRenderedEdges] = useState<JSX.Element[]>([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [edgeType, setEdgeType] = useState<EdgeType>('request');
   const [deadlockPath, setDeadlockPath] = useState<string[]>([]);
@@ -41,18 +43,6 @@ export default function RAGSimulatorPage() {
   const [isGenerating, setIsGenerating] = useState<false | 'random' | 'deadlocked' | 'safe'>(false);
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
   
-  useEffect(() => {
-    // Defer edge rendering to the client side after initial hydration
-    // to prevent server/client mismatch from DOM calculations.
-    const edgeElements = edges.map(edge => {
-      const sourceNode = nodes.find(n => n.id === edge.sourceId);
-      const targetNode = nodes.find(n => n.id === edge.targetId);
-      if (!sourceNode || !targetNode) return null;
-      return <EdgeComponent key={edge.id} edge={edge} source={sourceNode} target={targetNode} isInDeadlock={deadlockPath.includes(edge.id)} />;
-    }).filter(Boolean) as JSX.Element[];
-    setRenderedEdges(edgeElements);
-  }, [nodes, edges, deadlockPath]);
-
   const processCount = nodes.filter(n => n.type === 'process').length;
   const resourceCount = nodes.filter(n => n.type === 'resource').length;
 
@@ -212,7 +202,12 @@ export default function RAGSimulatorPage() {
               </motion.div>
             ))}
             <svg className="absolute top-0 left-0 w-full h-full" style={{ pointerEvents: 'none' }}>
-              {renderedEdges}
+                {edges.map(edge => {
+                    const sourceNode = nodes.find(n => n.id === edge.sourceId);
+                    const targetNode = nodes.find(n => n.id === edge.targetId);
+                    if (!sourceNode || !targetNode) return null;
+                    return <RagEdge key={edge.id} edge={edge} source={sourceNode} target={targetNode} isInDeadlock={deadlockPath.includes(edge.id)} />;
+                })}
             </svg>
           </div>
         </CardContent>
@@ -303,42 +298,3 @@ const NodeComponent = ({ node, isSelected, isInDeadlock }: { node: Node, isSelec
     </div>
   );
 };
-
-const EdgeComponent = ({ edge, source, target, isInDeadlock }: { edge: Edge, source: Node, target: Node, isInDeadlock: boolean }) => {
-    const isRequest = edge.type === 'request';
-    const markerId = `arrow-${edge.id}`;
-    
-    const parent = document.querySelector('.relative.w-full.h-\\[60vh\\]');
-    if (!parent) return null; // Can't render without a parent container
-
-    const parentRect = parent.getBoundingClientRect();
-    
-    // Adjust start/end points to be on the edge of the nodes
-    const angle = Math.atan2(target.position.y - source.position.y, target.position.x - source.position.x);
-    const nodeSize = 35; // Approx radius of the node visuals in pixels (half of size-14)
-
-    const sourceX = (source.position.x / 100) * parentRect.width + (nodeSize * Math.cos(angle));
-    const sourceY = (source.position.y / 100) * parentRect.height + (nodeSize * Math.sin(angle));
-    const targetX = (target.position.x / 100) * parentRect.width - (nodeSize * Math.cos(angle));
-    const targetY = (target.position.y / 100) * parentRect.height - (nodeSize * Math.sin(angle));
-
-  return (
-    <>
-      <defs>
-        <marker id={markerId} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill={isInDeadlock ? 'hsl(var(--destructive))' : 'currentColor'} />
-        </marker>
-      </defs>
-      <line
-        x1={sourceX} y1={sourceY}
-        x2={targetX} y2={targetY}
-        stroke={isInDeadlock ? 'hsl(var(--destructive))' : 'currentColor'}
-        strokeWidth="2"
-        markerEnd={`url(#${markerId})`}
-        strokeDasharray={isRequest ? "6,6" : "none"}
-      />
-    </>
-  );
-};
-
-    
