@@ -18,41 +18,55 @@ import { ThemeToggle } from '@/components/theme-toggle';
 export function Header() {
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
-      <div className="flex items-center gap-2 md:hidden">
-        <SidebarTrigger />
-        <Link href="/" className="flex items-center gap-2 font-semibold">
+      <div className="flex items-center gap-4">
+        <div className="md:hidden">
+            <SidebarTrigger />
+        </div>
+        <Link
+          href="/"
+          className="hidden items-center gap-2 font-semibold md:flex"
+        >
           <Logo className="h-6 w-6 text-primary" />
-          <span className="sm:inline-block">Deadlock Defender</span>
+          <span className="sr-only">Deadlock Defender</span>
         </Link>
       </div>
 
-      <div className="flex w-full items-center justify-end gap-4">
-        <ThemeToggle />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src="https://picsum.photos/seed/user-avatar/100/100" alt="User" />
-                <AvatarFallback>U</AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end" forceMount>
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">User</p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  user@example.com
-                </p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Log out</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <div className="flex flex-1 items-center justify-between md:justify-end">
+        <Link
+          href="/"
+          className="flex items-center gap-2 font-semibold md:hidden"
+        >
+          <Logo className="h-6 w-6 text-primary" />
+          <span>Deadlock Defender</span>
+        </Link>
+        <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Avatar className="h-9 w-9">
+                    <AvatarImage src="https://picsum.photos/seed/user-avatar/100/100" alt="User" />
+                    <AvatarFallback>U</AvatarFallback>
+                </Avatar>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">User</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                    user@example.com
+                    </p>
+                </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Profile</DropdownMenuItem>
+                <DropdownMenuItem>Settings</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Log out</DropdownMenuItem>
+            </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
       </div>
     </header>
   );
