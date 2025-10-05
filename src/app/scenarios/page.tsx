@@ -1,3 +1,4 @@
+'use client';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -10,37 +11,23 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Database, Printer } from 'lucide-react';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { ArrowRight, Database, Printer, Loader2 } from 'lucide-react';
+import { useCollection, useFirestore } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Scenario } from '@/lib/scenarios';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-const scenarios = [
-  {
-    title: 'The Printer Queue Jam',
-    description: 'Two departments are trying to print large documents, but the printers are gridlocked. Can you sort it out?',
-    href: '/scenarios/printer-queue',
-    tags: ['Resource Allocation', 'Beginner'],
-    icon: <Printer className="size-6" />,
-    image: PlaceHolderImages.find(img => img.id === 'printer-queue'),
-  },
-  {
-    title: 'Database Deadlock Dilemma',
-    description: 'Multiple transactions are stuck, waiting on each other to release table locks. Find the deadlock and resolve it.',
-    href: '/scenarios/database-locks',
-    tags: ['Cycle Detection', 'Intermediate'],
-    icon: <Database className="size-6" />,
-    image: PlaceHolderImages.find(img => img.id === 'database-server'),
-  },
-  {
-    title: 'The Banker of Wall Street',
-    description: "You're a banker managing loans. Use Banker's algorithm to ensure the bank never enters an unsafe state.",
-    href: '/scenarios/bank-loans',
-    tags: ["Banker's Algorithm", 'Advanced'],
-    icon: <ArrowRight className="size-6" />,
-    image: PlaceHolderImages.find(img => img.id === 'trading-floor'),
-  },
-];
+const iconMap: Record<string, React.ReactNode> = {
+  'printer-queue': <Printer className="size-6" />,
+  'database-locks': <Database className="size-6" />,
+  'bank-loans': <ArrowRight className="size-6" />,
+};
 
 export default function ScenariosPage() {
+  const firestore = useFirestore();
+  const scenariosQuery = collection(firestore, 'scenarios');
+  const { data: scenarios, isLoading, error } = useCollection<Scenario>(scenariosQuery);
+
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -50,50 +37,67 @@ export default function ScenariosPage() {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {scenarios.map(scenario => (
-          <Card
-            key={scenario.href}
-            className="flex flex-col overflow-hidden transition-all hover:shadow-lg"
-          >
-            <div className="relative h-48 w-full">
-              {scenario.image ? (
-                <Image
-                  src={scenario.image.imageUrl}
-                  alt={scenario.image.description}
-                  fill
-                  className="object-cover"
-                  data-ai-hint={scenario.image.imageHint}
-                />
-              ) : (
-                <div className="bg-secondary w-full h-full flex items-center justify-center">
-                  {scenario.icon}
-                </div>
-              )}
-            </div>
-            <CardHeader>
-              <CardTitle>{scenario.title}</CardTitle>
-              <CardDescription>{scenario.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col justify-end">
-              <div className="flex flex-wrap gap-2">
-                {scenario.tags.map(tag => (
-                  <Badge key={tag} variant="secondary">
-                    {tag}
-                  </Badge>
-                ))}
+      {isLoading && (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="size-8 animate-spin text-primary" />
+          <p className="ml-4 text-muted-foreground">Loading scenarios...</p>
+        </div>
+      )}
+
+      {error && (
+         <Alert variant="destructive">
+            <AlertTitle>Error Loading Scenarios</AlertTitle>
+            <AlertDescription>
+                Could not fetch scenarios from the database. Please ensure you have a connection and the correct permissions.
+            </AlertDescription>
+        </Alert>
+      )}
+
+      {!isLoading && !error && scenarios && (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {scenarios.map(scenario => (
+            <Card
+              key={scenario.id}
+              className="flex flex-col overflow-hidden transition-all hover:shadow-lg"
+            >
+              <div className="relative h-48 w-full">
+                {scenario.imageUrl ? (
+                  <Image
+                    src={scenario.imageUrl}
+                    alt={scenario.description}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="bg-secondary w-full h-full flex items-center justify-center">
+                    {iconMap[scenario.id] || <ArrowRight className="size-6" />}
+                  </div>
+                )}
               </div>
-            </CardContent>
-            <CardFooter>
-              <Button asChild className="w-full">
-                <Link href={scenario.href}>
-                  Start Scenario <ArrowRight className="ml-2 size-4" />
-                </Link>
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+              <CardHeader>
+                <CardTitle>{scenario.title}</CardTitle>
+                <CardDescription>{scenario.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col justify-end">
+                <div className="flex flex-wrap gap-2">
+                  {scenario.tags.map(tag => (
+                    <Badge key={tag} variant="secondary">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button asChild className="w-full">
+                  <Link href={`/scenarios/${scenario.id}`}>
+                    Start Scenario <ArrowRight className="ml-2 size-4" />
+                  </Link>
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

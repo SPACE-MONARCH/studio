@@ -3,6 +3,7 @@ import './globals.css';
 import {Toaster} from '@/components/ui/toaster';
 import {MainLayout} from '@/components/layout/main-layout';
 import {ThemeProvider} from '@/components/theme-provider';
+import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'Deadlock Defender',
@@ -26,7 +27,9 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <MainLayout>{children}</MainLayout>
+          <FirebaseClientProvider>
+            <MainLayout>{children}</MainLayout>
+          </FirebaseClientProvider>
           <Toaster />
         </ThemeProvider>
       </body>

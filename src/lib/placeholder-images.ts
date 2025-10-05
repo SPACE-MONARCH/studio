@@ -7,4 +7,6 @@ export type ImagePlaceholder = {
   imageHint: string;
 };
 
-export const PlaceHolderImages: ImagePlaceholder[] = data.placeholderImages;
+// This is now empty, as scenarios will be loaded from Firestore.
+// The file is kept for other potential placeholder uses.
+export const PlaceHolderImages: ImagePlaceholder[] = [];

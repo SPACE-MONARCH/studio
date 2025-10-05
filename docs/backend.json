@@ -8,8 +8,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the scenario entity. Serves as the primary key.",
-          "format": "uuid"
+          "description": "Unique identifier for the scenario. This will be the document ID."
         },
         "title": {
           "type": "string",
@@ -32,9 +31,17 @@
           "format": "uri"
         },
         "content": {
-          "type": "string",
-          "description": "JSON string containing the scenario setup, resource matrix, processes, and instructions.",
-          "format": "json-string"
+          "type": "object",
+          "description": "Object containing the scenario setup, resource matrix, processes, and instructions.",
+          "properties": {
+            "processes": { "type": "array", "items": { "type": "string" } },
+            "resources": { "type": "array", "items": { "type": "string" } },
+            "allocationMatrix": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } },
+            "maxMatrix": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } },
+            "initialAvailableResources": { "type": "array", "items": { "type": "number" } },
+            "objective": { "type": "string" }
+          },
+          "required": ["processes", "resources", "allocationMatrix", "maxMatrix", "initialAvailableResources", "objective"]
         }
       },
       "required": [
@@ -49,29 +56,15 @@
   },
   "auth": {
     "providers": [
-      "password",
       "anonymous"
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/scenarios/{scenarioId}",
-        "definition": {
-          "entityName": "Scenario",
-          "schema": {
-            "$ref": "#/backend/entities/Scenario"
-          },
-          "description": "Stores individual game scenario data. Scenarios are globally accessible, so no denormalized authorization fields are needed.",
-          "params": [
-            {
-              "name": "scenarioId",
-              "description": "The unique identifier for the scenario."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The Firestore structure is designed to store game scenarios for the Deadlock Avoidance learning application. The core principle is Authorization Independence achieved through structural segregation. The structure includes a single collection, `/scenarios`, which houses all scenario documents. Each scenario document contains all the data necessary to render the scenario, avoiding the need for subcollections or `get()` calls in security rules, which enforces Authorization Independence. This enables atomic operations (transactions/batches) when dealing with scenario data. By keeping the scenario data self-contained, we ensure clarity of intent, making the structure easy to understand and debug. Furthermore, because the scenarios collection is homogeneous and contains only scenarios with the same access needs (publicly available scenarios for learning), the ruleset is simplified significantly. The structure supports required QAPs as all scenarios are equally accessible based on the application's logic of making them available to all users."
+    "/scenarios/{scenarioId}": {
+      "schema": {
+        "$ref": "#/entities/Scenario"
+      },
+      "description": "Stores individual game scenario data. Scenarios are globally accessible for all authenticated users."
+    }
   }
 }
