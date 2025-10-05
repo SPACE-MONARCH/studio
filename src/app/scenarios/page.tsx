@@ -45,7 +45,7 @@ export default function ScenariosPage() {
       await seedScenarios(firestore);
       // Data will refresh automatically via the useCollection hook
     } catch (e: any) {
-       if (e.code === 'permission-denied') {
+      if (e.code === 'permission-denied') {
         // Create a rich, contextual error for the developer.
         const permissionError = new FirestorePermissionError({
           path: 'scenarios',
