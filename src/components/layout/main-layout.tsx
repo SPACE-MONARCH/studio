@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -13,6 +14,9 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarFooter,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import { Header } from './header';
 import { Logo } from '../icons/logo';
@@ -93,7 +97,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         <SidebarContent>
           <SidebarMenu>
             {navItems.map(item => (
-              <SidebarMenuItem key={item.href}>
+               <SidebarMenuItem key={item.href} className="relative">
                 <SidebarMenuButton
                   asChild
                   isActive={pathname.startsWith(item.href) && (item.href === '/' ? pathname === '/' : true)}
@@ -104,6 +108,19 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                     <span>{item.label}</span>
                   </Link>
                 </SidebarMenuButton>
+                {item.subItems && (
+                  <div className="group-data-[collapsible=icon]:hidden">
+                    <SidebarMenuSub className={cn(pathname.startsWith(item.href) ? 'flex' : 'hidden')}>
+                      {item.subItems.map(subItem => (
+                        <SidebarMenuSubItem key={subItem.href}>
+                          <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                            <Link href={subItem.href}>{subItem.label}</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </div>
+                )}
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
