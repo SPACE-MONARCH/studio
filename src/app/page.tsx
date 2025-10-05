@@ -7,59 +7,51 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, ArrowRight, BrainCircuit, BotMessageSquare, Puzzle, ShieldAlert, SearchCheck } from 'lucide-react';
+import { ArrowRight, BrainCircuit, BotMessageSquare, Puzzle, ShieldAlert, SearchCheck } from 'lucide-react';
 import type { Module } from '@/lib/types';
-import { Badge } from '@/components/ui/badge';
 import { RAGIcon } from '@/components/icons/rag-icon';
 
-const modules: (Module & { icon: React.ReactNode })[] = [
+const modules: (Omit<Module, 'status'> & { icon: React.ReactNode })[] = [
   {
     title: 'Intro to Deadlocks',
     description: 'Learn the fundamental concepts of processes, resources, and deadlocks.',
     href: '/learn/basics',
-    status: 'completed',
     icon: <BrainCircuit className="size-8 text-primary" />,
   },
   {
     title: 'Deadlock Prevention',
     description: 'Explore strategies to prevent deadlocks from occurring in the first place.',
     href: '/learn/prevention',
-    status: 'inprogress',
     icon: <ShieldAlert className="size-8 text-primary" />,
   },
   {
     title: 'Resource Allocation Graph',
     description: 'Visualize system states and learn to identify potential deadlocks.',
     href: '/tools/rag-simulator',
-    status: 'inprogress',
     icon: <RAGIcon className="size-8 text-primary" />
   },
   {
     title: "Banker's Algorithm",
     description: 'Master the classic algorithm for deadlock avoidance.',
     href: '/tools/bankers-algorithm',
-    status: 'locked',
     icon: <BotMessageSquare className="size-8 text-primary" />,
   },
   {
     title: 'Detection & Recovery',
     description: 'Find and resolve deadlocks after they have occurred.',
     href: '/tools/detection-recovery',
-    status: 'locked',
     icon: <SearchCheck className="size-8 text-primary" />,
   },
   {
     title: 'Game Scenarios',
     description: 'Apply your knowledge in real-world resource management puzzles.',
     href: '/scenarios',
-    status: 'locked',
     icon: <Puzzle className="size-8 text-primary" />,
   },
   {
     title: 'Adaptive Quiz',
     description: 'Test your skills with an AI that adapts to your performance.',
     href: '/adaptive-quiz',
-    status: 'inprogress',
     icon: <BrainCircuit className="size-8 text-primary" />,
   },
 ];
@@ -88,22 +80,11 @@ export default function DashboardPage() {
               <div className="p-2 rounded-full bg-primary/10">{mod.icon}</div>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-end">
-              <div className="flex items-center justify-between mt-4">
-                {mod.status === 'completed' ? (
-                  <Badge variant="secondary" className="text-emerald-600 border-emerald-200">
-                    <CheckCircle className="mr-1.5 size-4" />
-                    Completed
-                  </Badge>
-                ) : mod.status === 'inprogress' ? (
-                  <Badge variant="secondary">In Progress</Badge>
-                ) : (
-                  <Badge variant="outline">Locked</Badge>
-                )}
+              <div className="flex items-center justify-end mt-4">
                 <Button
                   asChild
                   variant="ghost"
                   size="sm"
-                  disabled={mod.status === 'locked'}
                   aria-label={`Go to ${mod.title}`}
                 >
                   <Link href={mod.href}>
