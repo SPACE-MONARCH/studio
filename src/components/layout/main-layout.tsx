@@ -13,7 +13,6 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarInset,
-  SidebarFooter,
   SidebarMenuSub,
   SidebarMenuSubItem,
   SidebarMenuSubButton,
@@ -25,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '../ui/button';
 import { useSidebar } from '@/components/ui/sidebar';
+import { RAGIcon } from '../icons/rag-icon';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
