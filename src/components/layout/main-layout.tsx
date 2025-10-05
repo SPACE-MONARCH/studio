@@ -12,12 +12,11 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarInset,
-  SidebarTrigger,
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Header } from './header';
 import { Logo } from '../icons/logo';
-import { BrainCircuit, BotMessageSquare, Puzzle, Home, Wrench, BookOpen, ChevronsLeft, ShieldAlert, SearchCheck } from 'lucide-react';
+import { BotMessageSquare, BrainCircuit, BookOpen, ChevronsLeft, Home, Puzzle, SearchCheck, ShieldAlert, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '../ui/button';
@@ -25,21 +24,31 @@ import { useSidebar } from '@/components/ui/sidebar';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
-  { href: '/learn', label: 'Learn', icon: BookOpen, subItems: [
+  {
+    href: '/learn',
+    label: 'Learn',
+    icon: BookOpen,
+    subItems: [
       { href: '/learn/basics', label: 'Intro to Deadlocks' },
       { href: '/learn/prevention', label: 'Prevention' },
-  ]},
-  { href: '/tools', label: 'Tools', icon: Wrench, subItems: [
+    ],
+  },
+  {
+    href: '/tools',
+    label: 'Tools',
+    icon: Wrench,
+    subItems: [
       { href: '/tools/rag-simulator', label: 'RAG Simulator' },
       { href: "/tools/bankers-algorithm", label: "Banker's Algorithm" },
-      { href: "/tools/detection-recovery", label: "Detection & Recovery" },
-  ]},
+      { href: '/tools/detection-recovery', label: 'Detection & Recovery' },
+    ],
+  },
   { href: '/scenarios', label: 'Scenarios', icon: Puzzle },
   { href: '/adaptive-quiz', label: 'Adaptive Quiz', icon: BrainCircuit },
 ];
 
 function SidebarCollapse() {
-  const { state, toggleSidebar } = useSidebar();
+  const { toggleSidebar } = useSidebar();
   return (
     <Button
       variant="ghost"
@@ -51,7 +60,6 @@ function SidebarCollapse() {
     </Button>
   );
 }
-
 
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -67,14 +75,18 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <div className="flex items-center justify-between">
-             <div className="flex items-center gap-2 group-data-[collapsible=icon]:-ml-1">
-                <Button asChild variant="ghost" size="icon">
-                    <Link href="/"><Logo className="size-5 text-primary"/></Link>
-                </Button>
-                <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden">Deadlock Defender</span>
+            <div className="flex items-center gap-2 group-data-[collapsible=icon]:-ml-1">
+              <Button asChild variant="ghost" size="icon">
+                <Link href="/">
+                  <Logo className="size-5 text-primary" />
+                </Link>
+              </Button>
+              <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden">
+                Deadlock Defender
+              </span>
             </div>
             <div className="group-data-[collapsible=icon]:hidden">
-                <SidebarCollapse />
+              <SidebarCollapse />
             </div>
           </div>
         </SidebarHeader>
@@ -97,15 +109,18 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             ))}
           </SidebarMenu>
         </SidebarContent>
-         <SidebarFooter className="group-data-[collapsible=icon]:hidden">
-            <div className="flex items-center justify-end">
-                <SidebarCollapse />
-            </div>
+        <SidebarFooter className="group-data-[collapsible=icon]:hidden">
+          <div className="flex items-center justify-end">
+            <SidebarCollapse />
+          </div>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className={cn('transition-[margin] duration-300 ease-in-out',
-        !isMobile && open ? 'md:ml-64' : 'md:ml-16'
-      )}>
+      <SidebarInset
+        className={cn(
+          'transition-[margin] duration-300 ease-in-out',
+          !isMobile && open ? 'md:ml-64' : 'md:ml-16'
+        )}
+      >
         <Header />
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </SidebarInset>
