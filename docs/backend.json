@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "Scenario": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Scenario",
+      "type": "object",
+      "description": "Represents a game scenario with its metadata and content for the Deadlock Defender app.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the scenario entity. Serves as the primary key.",
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the scenario, e.g., 'The Printer Queue Jam'."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the scenario's context and setup."
+        },
+        "tags": {
+          "type": "array",
+          "description": "An array of tags for categorizing the scenario (e.g., difficulty, topic).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the scenario's thumbnail image.",
+          "format": "uri"
+        },
+        "content": {
+          "type": "string",
+          "description": "JSON string containing the scenario setup, resource matrix, processes, and instructions.",
+          "format": "json-string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "description",
+        "tags",
+        "imageUrl",
+        "content"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/scenarios/{scenarioId}",
+        "definition": {
+          "entityName": "Scenario",
+          "schema": {
+            "$ref": "#/backend/entities/Scenario"
+          },
+          "description": "Stores individual game scenario data. Scenarios are globally accessible, so no denormalized authorization fields are needed.",
+          "params": [
+            {
+              "name": "scenarioId",
+              "description": "The unique identifier for the scenario."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to store game scenarios for the Deadlock Avoidance learning application. The core principle is Authorization Independence achieved through structural segregation. The structure includes a single collection, `/scenarios`, which houses all scenario documents. Each scenario document contains all the data necessary to render the scenario, avoiding the need for subcollections or `get()` calls in security rules, which enforces Authorization Independence. This enables atomic operations (transactions/batches) when dealing with scenario data. By keeping the scenario data self-contained, we ensure clarity of intent, making the structure easy to understand and debug. Furthermore, because the scenarios collection is homogeneous and contains only scenarios with the same access needs (publicly available scenarios for learning), the ruleset is simplified significantly. The structure supports required QAPs as all scenarios are equally accessible based on the application's logic of making them available to all users."
+  }
+}
