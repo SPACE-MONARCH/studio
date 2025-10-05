@@ -30,37 +30,33 @@ interface Edge {
   type: EdgeType;
 }
 
-// Generate a random ID on the client
-const useClientRandomId = () => {
-    const [id, setId] = useState<string | null>(null);
-    useEffect(() => {
-        setId(self.crypto.randomUUID());
-    }, []);
-    return id;
-};
-
-
 export default function RAGSimulatorPage() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const [renderedEdges, setRenderedEdges] = useState<JSX.Element[]>([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [edgeType, setEdgeType] = useState<EdgeType>('request');
   const [deadlockPath, setDeadlockPath] = useState<string[]>([]);
   const [detectionResult, setDetectionResult] = useState<'deadlock' | 'safe' | null>(null);
   const [isGenerating, setIsGenerating] = useState<false | 'random' | 'deadlocked' | 'safe'>(false);
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    // This effect runs only on the client, after hydration
-    setIsClient(true);
-  }, []);
   
+  useEffect(() => {
+    // Defer edge rendering to the client side after initial hydration
+    // to prevent server/client mismatch from DOM calculations.
+    const edgeElements = edges.map(edge => {
+      const sourceNode = nodes.find(n => n.id === edge.sourceId);
+      const targetNode = nodes.find(n => n.id === edge.targetId);
+      if (!sourceNode || !targetNode) return null;
+      return <EdgeComponent key={edge.id} edge={edge} source={sourceNode} target={targetNode} isInDeadlock={deadlockPath.includes(edge.id)} />;
+    }).filter(Boolean) as JSX.Element[];
+    setRenderedEdges(edgeElements);
+  }, [nodes, edges, deadlockPath]);
+
   const processCount = nodes.filter(n => n.type === 'process').length;
   const resourceCount = nodes.filter(n => n.type === 'resource').length;
 
   const addNode = (type: NodeType) => {
-    if (!isClient) return; // Don't run on server
     const label = type === 'process' ? `P${processCount}` : `R${resourceCount}`;
     const newNode: Node = {
       id: self.crypto.randomUUID(),
@@ -72,7 +68,6 @@ export default function RAGSimulatorPage() {
   };
   
   const handleNodeClick = (node: Node) => {
-    if (!isClient) return;
     setDeadlockPath([]);
     setDetectionResult(null);
 
@@ -127,6 +122,10 @@ export default function RAGSimulatorPage() {
               const edge = edges.find(e => e.sourceId === cyclePath[i] && e.targetId === cyclePath[i+1]);
               if(edge) cycleEdgeIds.add(edge.id);
           }
+          const finalPath = cyclePath[cyclePath.length-1] === cyclePath[0] ? cyclePath : [...cyclePath, cyclePath[0]];
+          const finalEdge = edges.find(e => e.sourceId === finalPath[finalPath.length-2] && e.targetId === finalPath[finalPath.length-1]);
+          if(finalEdge) cycleEdgeIds.add(finalEdge.id);
+
           setDeadlockPath([...cycleNodeIds, ...cycleEdgeIds]);
           setDetectionResult('deadlock');
           return;
@@ -165,7 +164,6 @@ export default function RAGSimulatorPage() {
   };
   
   const handleGenerateScenario = async (type: 'random' | 'deadlocked' | 'safe') => {
-    if (!isClient) return;
     clearAll();
     setIsGenerating(type);
     try {
@@ -214,12 +212,7 @@ export default function RAGSimulatorPage() {
               </motion.div>
             ))}
             <svg className="absolute top-0 left-0 w-full h-full" style={{ pointerEvents: 'none' }}>
-              {isClient && edges.map(edge => {
-                const sourceNode = nodes.find(n => n.id === edge.sourceId);
-                const targetNode = nodes.find(n => n.id === edge.targetId);
-                if(!sourceNode || !targetNode) return null;
-                return <EdgeComponent key={edge.id} edge={edge} source={sourceNode} target={targetNode} isInDeadlock={deadlockPath.includes(edge.id)} />;
-              })}
+              {renderedEdges}
             </svg>
           </div>
         </CardContent>
@@ -315,19 +308,19 @@ const EdgeComponent = ({ edge, source, target, isInDeadlock }: { edge: Edge, sou
     const isRequest = edge.type === 'request';
     const markerId = `arrow-${edge.id}`;
     
+    const parent = document.querySelector('.relative.w-full.h-\\[60vh\\]');
+    if (!parent) return null; // Can't render without a parent container
+
+    const parentRect = parent.getBoundingClientRect();
+    
     // Adjust start/end points to be on the edge of the nodes
     const angle = Math.atan2(target.position.y - source.position.y, target.position.x - source.position.x);
     const nodeSize = 35; // Approx radius of the node visuals in pixels (half of size-14)
 
-    const svgContainer = source.position.x < target.position.x ? source : target;
-    const parent = document.querySelector('.relative.w-full.h-\\[60vh\\]');
-    const parentWidth = parent?.clientWidth || 1;
-    const parentHeight = parent?.clientHeight || 1;
-
-    const sourceX = (source.position.x / 100) * parentWidth + (nodeSize * Math.cos(angle));
-    const sourceY = (source.position.y / 100) * parentHeight + (nodeSize * Math.sin(angle));
-    const targetX = (target.position.x / 100) * parentWidth - (nodeSize * Math.cos(angle));
-    const targetY = (target.position.y / 100) * parentHeight - (nodeSize * Math.sin(angle));
+    const sourceX = (source.position.x / 100) * parentRect.width + (nodeSize * Math.cos(angle));
+    const sourceY = (source.position.y / 100) * parentRect.height + (nodeSize * Math.sin(angle));
+    const targetX = (target.position.x / 100) * parentRect.width - (nodeSize * Math.cos(angle));
+    const targetY = (target.position.y / 100) * parentRect.height - (nodeSize * Math.sin(angle));
 
   return (
     <>
