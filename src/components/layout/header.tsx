@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Logo } from '@/components/icons/logo';
 import Link from 'next/link';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export function Header() {
   const isMobile = useIsMobile();
@@ -29,6 +30,7 @@ export function Header() {
       </div>
 
       <div className="flex w-full items-center justify-end gap-4">
+        <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
