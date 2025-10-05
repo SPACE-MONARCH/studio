@@ -20,7 +20,7 @@ const questions: Record<Difficulty, { text: string; options: string[]; answer: s
     text: 'In a Resource Allocation Graph, a cycle is a ________ condition for a deadlock if resources have multiple instances.',
     options: ['necessary but not sufficient', 'sufficient but not necessary', 'necessary and sufficient', 'neither necessary nor sufficient'],
     answer: 'necessary but not sufficient',
-s  },
+  },
   hard: {
     text: "If Banker's Algorithm is checking a request, what does it mean if `Request_i <= Need_i` is false?",
     options: ['The process has exceeded its maximum claim', 'The system is in an unsafe state', 'The resources are not available', 'The process will be granted the resources'],
