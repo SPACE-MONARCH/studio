@@ -7,9 +7,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, ArrowRight, BrainCircuit, BotMessageSquare, Puzzle } from 'lucide-react';
+import { CheckCircle, ArrowRight, BrainCircuit, BotMessageSquare, Puzzle, ShieldAlert, SearchCheck } from 'lucide-react';
 import type { Module } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
+import { RAGIcon } from '@/components/icons/rag-icon';
 
 const modules: (Module & { icon: React.ReactNode })[] = [
   {
@@ -20,25 +21,18 @@ const modules: (Module & { icon: React.ReactNode })[] = [
     icon: <BrainCircuit className="size-8 text-primary" />,
   },
   {
+    title: 'Deadlock Prevention',
+    description: 'Explore strategies to prevent deadlocks from occurring in the first place.',
+    href: '/learn/prevention',
+    status: 'inprogress',
+    icon: <ShieldAlert className="size-8 text-primary" />,
+  },
+  {
     title: 'Resource Allocation Graph',
     description: 'Visualize system states and learn to identify potential deadlocks.',
     href: '/tools/rag-simulator',
     status: 'inprogress',
-    icon: (
-      <svg
-        className="size-8 text-primary"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M12 2a10 10 0 100 20 10 10 0 000-20z" />
-        <path d="M12 12m-4 0a4 4 0 108 0 4 4 0 10-8 0" />
-        <path d="M12 12h8" />
-      </svg>
-    ),
+    icon: <RAGIcon className="size-8 text-primary" />
   },
   {
     title: "Banker's Algorithm",
@@ -46,6 +40,13 @@ const modules: (Module & { icon: React.ReactNode })[] = [
     href: '/tools/bankers-algorithm',
     status: 'locked',
     icon: <BotMessageSquare className="size-8 text-primary" />,
+  },
+  {
+    title: 'Detection & Recovery',
+    description: 'Find and resolve deadlocks after they have occurred.',
+    href: '/tools/detection-recovery',
+    status: 'locked',
+    icon: <SearchCheck className="size-8 text-primary" />,
   },
   {
     title: 'Game Scenarios',

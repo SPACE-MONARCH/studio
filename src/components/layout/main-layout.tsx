@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Header } from './header';
 import { Logo } from '../icons/logo';
-import { BrainCircuit, BotMessageSquare, Puzzle, Home, Wrench, BookOpen, ChevronsLeft } from 'lucide-react';
+import { BrainCircuit, BotMessageSquare, Puzzle, Home, Wrench, BookOpen, ChevronsLeft, ShieldAlert, SearchCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '../ui/button';
@@ -27,10 +27,12 @@ const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
   { href: '/learn', label: 'Learn', icon: BookOpen, subItems: [
       { href: '/learn/basics', label: 'Intro to Deadlocks' },
+      { href: '/learn/prevention', label: 'Prevention' },
   ]},
   { href: '/tools', label: 'Tools', icon: Wrench, subItems: [
       { href: '/tools/rag-simulator', label: 'RAG Simulator' },
       { href: "/tools/bankers-algorithm", label: "Banker's Algorithm" },
+      { href: "/tools/detection-recovery", label: "Detection & Recovery" },
   ]},
   { href: '/scenarios', label: 'Scenarios', icon: Puzzle },
   { href: '/adaptive-quiz', label: 'Adaptive Quiz', icon: BrainCircuit },
