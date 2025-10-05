@@ -4,14 +4,18 @@ import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Scenario } from '@/lib/scenarios';
 import Image from 'next/image';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle, ShieldCheck, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, AlertTriangle, ShieldCheck, RefreshCw, CheckCircle, XCircle, Sparkles, Bot } from 'lucide-react';
 import { SimulationMatrixTable } from '@/components/simulation-matrix-table';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
+import {
+  generateScenarioState,
+  type GenerateScenarioStateOutput,
+} from '@/ai/flows/generate-scenario-state';
 
 // Function to check if a state is safe using Banker's Algorithm
 const isSafe = (
@@ -22,25 +26,25 @@ const isSafe = (
 ): boolean => {
   let work = [...available];
   let finish = Array(processes.length).fill(false);
-  let count = 0;
-
-  while (count < processes.length) {
-    let found = false;
+  
+  // Find processes that can finish and release resources
+  while (true) {
+    let foundProcess = false;
     for (let i = 0; i < processes.length; i++) {
       if (!finish[i]) {
         if (need[i].every((resource, j) => resource <= work[j])) {
           work = work.map((w, j) => w + allocation[i][j]);
           finish[i] = true;
-          found = true;
-          count++;
+          foundProcess = true;
         }
       }
     }
-    if (!found) {
-      return false; // No process could be allocated, unsafe state
+    if (!foundProcess) {
+      break; // No process could be allocated in this pass
     }
   }
-  return true; // All processes finished, safe state
+
+  return finish.every(f => f === true); // If all processes are finished, it's safe
 };
 
 
@@ -57,33 +61,30 @@ export default function ScenarioDetailPage() {
   const { data: scenario, isLoading, error } = useDoc<Scenario>(scenarioRef);
   
   const [allocation, setAllocation] = useState<number[][]>([]);
+  const [max, setMax] = useState<number[][]>([]);
   const [available, setAvailable] = useState<number[]>([]);
   const [finished, setFinished] = useState<boolean[]>([]);
   const [simulationLog, setSimulationLog] = useState<string | null>(null);
   const [simulationStatus, setSimulationStatus] = useState<'safe' | 'unsafe' | 'complete' | null>(null);
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState<false | 'random' | 'deadlocked' | 'safe'>(false);
   
-  const originalNeed = useMemo(() => {
-    if (!scenario) return [];
-    return scenario.content.maxMatrix.map((maxRow, i) =>
-        maxRow.row.map((maxVal, j) => maxVal - scenario.content.allocationMatrix[i].row[j])
-    );
-  }, [scenario]);
-
-
   const currentNeed = useMemo(() => {
-    if (!scenario) return [];
-     return scenario.content.maxMatrix.map((maxRow, i) =>
-        maxRow.row.map((maxVal, j) => maxVal - (allocation[i]?.[j] || 0) )
+    if (!scenario || max.length === 0 || allocation.length === 0) return [];
+     return max.map((maxRow, i) =>
+        maxRow.map((maxVal, j) => maxVal - (allocation[i]?.[j] || 0) )
     );
-  }, [scenario, allocation]);
+  }, [scenario, max, allocation]);
 
   const resetSimulation = useCallback(() => {
     if (scenario) {
       setAllocation(scenario.content.allocationMatrix.map(item => item.row));
+      setMax(scenario.content.maxMatrix.map(item => item.row));
       setAvailable(scenario.content.initialAvailableResources);
       setFinished(Array(scenario.content.processes.length).fill(false));
       setSimulationLog(null);
       setSimulationStatus(null);
+      setAiExplanation(null);
     }
   }, [scenario]);
 
@@ -94,6 +95,7 @@ export default function ScenarioDetailPage() {
   const handleRequest = (processIndex: number, resourceIndex: number) => {
     const requestAmount = 1; // Assuming request is always for 1 unit for this game
     const processNeed = currentNeed[processIndex][resourceIndex];
+    setAiExplanation(null);
     
     if (processNeed <= 0) {
         setSimulationStatus('unsafe');
@@ -109,11 +111,13 @@ export default function ScenarioDetailPage() {
     // Tentative allocation
     const tempAvailable = [...available];
     const tempAllocation = JSON.parse(JSON.stringify(allocation));
-    const tempNeed = JSON.parse(JSON.stringify(currentNeed));
-
+    
     tempAvailable[resourceIndex] -= requestAmount;
     tempAllocation[processIndex][resourceIndex] += requestAmount;
-    tempNeed[processIndex][resourceIndex] -= requestAmount;
+    
+    const tempNeed = max.map((maxRow, i) =>
+      maxRow.map((maxVal, j) => maxVal - (tempAllocation[i]?.[j] || 0) )
+    );
 
     // Check for safety
     if (isSafe(scenario!.content.processes, tempAvailable, tempAllocation, tempNeed)) {
@@ -134,7 +138,7 @@ export default function ScenarioDetailPage() {
           newFinished[processIndex] = true;
           setFinished(newFinished);
 
-          setSimulationLog(`P${processIndex} has all its resources and has FINISHED! It released its resources.`);
+          setSimulationLog(`P${processIndex} has all its resources and has FINISHED! It released its resources back to the pool.`);
 
           if(newFinished.every(f => f === true)) {
               setSimulationStatus('complete');
@@ -150,6 +154,7 @@ export default function ScenarioDetailPage() {
 
   const handleRelease = (processIndex: number, resourceIndex: number) => {
      const releaseAmount = 1;
+     setAiExplanation(null);
      if (allocation[processIndex][resourceIndex] < releaseAmount) {
          setSimulationStatus('unsafe');
          setSimulationLog(`P${processIndex} cannot release R${resourceIndex} as it doesn't hold enough.`);
@@ -166,6 +171,33 @@ export default function ScenarioDetailPage() {
      setAllocation(newAllocation);
      setSimulationStatus('safe');
      setSimulationLog(`P${processIndex} released R${resourceIndex}.`);
+  };
+
+  const handleGenerateState = async (type: 'random' | 'deadlocked' | 'safe') => {
+    if (!scenario) return;
+    setIsGenerating(type);
+    setAiExplanation(null);
+    try {
+      const result = await generateScenarioState({
+        scenarioTitle: scenario.title,
+        processCount: scenario.content.processes.length,
+        resourceCount: scenario.content.resources.length,
+        type,
+      });
+      setAllocation(result.allocationMatrix);
+      setMax(result.maxMatrix);
+      setAvailable(result.availableVector);
+      setFinished(Array(scenario.content.processes.length).fill(false));
+      setSimulationLog('New AI-generated scenario state loaded.');
+      setSimulationStatus(null);
+      setAiExplanation(result.explanation);
+
+    } catch (error) {
+      console.error('Failed to generate AI state:', error);
+      setSimulationLog('Error generating new state from AI.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
 
@@ -197,9 +229,7 @@ export default function ScenarioDetailPage() {
   }
 
   const { title, description, imageUrl, tags, content } = scenario;
-  const { processes, resources, maxMatrix } = content;
-
-  const maxData = maxMatrix.map(item => item.row);
+  const { processes, resources } = content;
 
   return (
     <div className="flex flex-col gap-8">
@@ -247,13 +277,34 @@ export default function ScenarioDetailPage() {
          <Card>
           <CardHeader>
             <CardTitle>Actions</CardTitle>
-            <CardDescription>Request or release resources. Try to get all processes to finish!</CardDescription>
+            <CardDescription>Reset the simulation to its original state.</CardDescription>
           </CardHeader>
           <CardContent className="flex gap-4">
              <Button onClick={resetSimulation} variant="outline"><RefreshCw className="mr-2"/> Reset Simulation</Button>
           </CardContent>
         </Card>
       </div>
+
+       <Card>
+        <CardHeader>
+          <CardTitle>AI Actions</CardTitle>
+          <CardDescription>Generate a new state for this scenario using AI.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+            <Button onClick={() => handleGenerateState('random')} disabled={!!isGenerating}>
+              {isGenerating === 'random' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+              Generate Random State
+            </Button>
+            <Button onClick={() => handleGenerateState('deadlocked')} disabled={!!isGenerating}>
+              {isGenerating === 'deadlocked' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <AlertTriangle className="mr-2 h-4 w-4" />}
+              Generate Deadlocked State
+            </Button>
+            <Button onClick={() => handleGenerateState('safe')} disabled={!!isGenerating}>
+              {isGenerating === 'safe' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+              Generate Safe State
+            </Button>
+        </CardContent>
+      </Card>
 
        {simulationStatus && (
         <Alert variant={simulationStatus === 'unsafe' ? 'destructive' : 'default'} className={cn(simulationStatus === 'safe' && 'border-blue-300', simulationStatus === 'complete' && 'bg-green-50 border-green-200')}>
@@ -269,6 +320,14 @@ export default function ScenarioDetailPage() {
                 {simulationLog}
             </AlertDescription>
         </Alert>
+      )}
+
+      {aiExplanation && (
+          <Alert>
+            <Bot className="h-4 w-4" />
+            <AlertTitle>AI Explanation</AlertTitle>
+            <AlertDescription>{aiExplanation}</AlertDescription>
+          </Alert>
       )}
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
@@ -293,7 +352,7 @@ export default function ScenarioDetailPage() {
           <Card>
             <CardHeader><CardTitle>Maximum Need</CardTitle></CardHeader>
             <CardContent>
-                <SimulationMatrixTable processes={processes} resources={resources} data={maxData} finished={finished} />
+                <SimulationMatrixTable processes={processes} resources={resources} data={max} finished={finished} />
             </CardContent>
         </Card>
       </div>
