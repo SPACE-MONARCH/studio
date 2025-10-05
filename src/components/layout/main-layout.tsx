@@ -12,7 +12,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarInset,
 } from '@/components/ui/sidebar';
 import {
   DropdownMenu,
@@ -103,14 +102,16 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                 {item.subItems ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                       <SidebarMenuButton
-                        isActive={pathname.startsWith(item.href)}
-                        tooltip={{ children: item.label }}
-                        className="w-full justify-start"
-                      >
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
+                      <div>
+                        <SidebarMenuButton
+                          isActive={pathname.startsWith(item.href)}
+                          tooltip={{ children: item.label }}
+                          className="w-full justify-start"
+                        >
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent side="right" align="start" className="ml-2 group-data-[collapsible=icon]:hidden">
                       {item.subItems.map(subItem => (
@@ -137,7 +138,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
         </SidebarContent>
       </Sidebar>
-      <SidebarInset
+      <div
         className={cn(
           'transition-[margin] duration-300 ease-in-out',
           !isMobile && open ? 'md:ml-64' : 'md:ml-16'
@@ -145,7 +146,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       >
         <Header />
         <main className="flex-1 p-4 md:p-6">{children}</main>
-      </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }
