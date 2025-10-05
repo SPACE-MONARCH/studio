@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -7,9 +10,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BrainCircuit, BotMessageSquare, Puzzle, ShieldAlert, SearchCheck } from 'lucide-react';
+import { ArrowRight, BrainCircuit, BotMessageSquare, Puzzle, ShieldAlert, SearchCheck, Loader2 } from 'lucide-react';
 import type { Module } from '@/lib/types';
 import { RAGIcon } from '@/components/icons/rag-icon';
+import { useRouter } from 'next/navigation';
 
 const modules: (Omit<Module, 'status'> & { icon: React.ReactNode })[] = [
   {
@@ -57,6 +61,14 @@ const modules: (Omit<Module, 'status'> & { icon: React.ReactNode })[] = [
 ];
 
 export default function DashboardPage() {
+  const [loadingModule, setLoadingModule] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleNavigation = (href: string) => {
+    setLoadingModule(href);
+    router.push(href);
+  };
+
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -67,34 +79,45 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {modules.map(mod => (
-          <Card
-            key={mod.href}
-            className="flex flex-col transition-all hover:shadow-md hover:-translate-y-1"
-          >
-            <CardHeader className="flex flex-row items-start justify-between gap-4">
-              <div className="flex-1">
-                <CardTitle className="text-lg font-semibold">{mod.title}</CardTitle>
-                <CardDescription>{mod.description}</CardDescription>
-              </div>
-              <div className="p-2 rounded-full bg-primary/10">{mod.icon}</div>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col justify-end">
-              <div className="flex items-center justify-end mt-4">
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="sm"
-                  aria-label={`Go to ${mod.title}`}
-                >
-                  <Link href={mod.href}>
-                    Start Learning <ArrowRight className="ml-2 size-4" />
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {modules.map(mod => {
+          const isLoading = loadingModule === mod.href;
+          return (
+            <Card
+              key={mod.href}
+              className="flex flex-col transition-all hover:shadow-md hover:-translate-y-1"
+            >
+              <CardHeader className="flex flex-row items-start justify-between gap-4">
+                <div className="flex-1">
+                  <CardTitle className="text-lg font-semibold">{mod.title}</CardTitle>
+                  <CardDescription>{mod.description}</CardDescription>
+                </div>
+                <div className="p-2 rounded-full bg-primary/10">{mod.icon}</div>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col justify-end">
+                <div className="flex items-center justify-end mt-4">
+                  <Button
+                    onClick={() => handleNavigation(mod.href)}
+                    variant="ghost"
+                    size="sm"
+                    disabled={isLoading}
+                    aria-label={`Go to ${mod.title}`}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Starting...
+                      </>
+                    ) : (
+                      <>
+                        Start Learning <ArrowRight className="ml-2 size-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
     </div>
   );
