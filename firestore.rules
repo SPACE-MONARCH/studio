@@ -1,35 +1,35 @@
 /**
- * @fileoverview Firestore Security Rules for Deadlock Defender App.
+ * @fileoverview Firestore Security Rules for Deadlock Defender Scenarios.
  *
  * Core Philosophy:
- * This ruleset prioritizes ease of development in the prototyping phase while maintaining a secure-by-default posture.
- * All authenticated users can read scenarios, but writes are explicitly forbidden.
+ * This ruleset prioritizes ease of use for development and testing.
+ * The `scenarios` collection is configured for public read and write access to facilitate rapid prototyping and scenario seeding without authentication barriers.
+ * This is acceptable for development and testing, but NOT for production due to security risks.
  *
  * Data Structure:
- * The primary data is stored in the `/scenarios/{scenarioId}` collection.
+ * Scenarios are stored in the top-level `/scenarios/{scenarioId}` collection.
  *
  * Key Security Decisions:
- * - Scenarios are globally readable, but write access is denied for all users in this version of rules. This ensure a secure starting point while app features are still being built.
- * - No user-specific data or ownership models are currently enforced. This will be revisited as user-generated content is added.
+ * - Public Read/Write Access: The `/scenarios/{scenarioId}` collection allows unrestricted access for both reading and writing data, which is insecure for production environments.
+ * - No Authentication Required: All users, including unauthenticated ones, can freely access and modify scenario data.
+ *
+ * Denormalization for Authorization: N/A (authorization is completely open)
+ * Structural Segregation: N/A (only one collection with public access)
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to the /scenarios/{scenarioId} collection.
-     * @path /scenarios/{scenarioId}
-     * @allow (get, list) Any authenticated user can read scenario data.
-     * @deny (create, update, delete) No user can create, update, or delete scenario data.
-     * @principle Public read, owner-only writes (currently, writes are disabled for prototyping).
+     * @description Allows any user to read and write scenario documents.
+     * @path /databases/{database}/documents/scenarios/{scenarioId}
+     * @allow (read, write) - Any user can read or write any scenario document.
+     * @deny (none) - There are no restrictions on reads or writes.
+     * @principle Public access for prototyping. INSECURE FOR PRODUCTION.
      */
     match /scenarios/{scenarioId} {
-      allow get: if true;
-      allow list: if true;
-
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get, list: if true;
+      allow create, update, delete: if true;
     }
   }
 }
