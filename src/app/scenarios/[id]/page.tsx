@@ -7,8 +7,42 @@ import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Loader2, AlertTriangle, ShieldCheck, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { SimulationMatrixTable } from '@/components/simulation-matrix-table';
+import { useState, useEffect, useMemo } from 'react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
+
+// Function to check if a state is safe using Banker's Algorithm
+const isSafe = (
+  processes: string[],
+  available: number[],
+  allocation: number[][],
+  need: number[][]
+): boolean => {
+  let work = [...available];
+  let finish = Array(processes.length).fill(false);
+  let count = 0;
+
+  while (count < processes.length) {
+    let found = false;
+    for (let i = 0; i < processes.length; i++) {
+      if (!finish[i]) {
+        if (need[i].every((resource, j) => resource <= work[j])) {
+          work = work.map((w, j) => w + allocation[i][j]);
+          finish[i] = true;
+          found = true;
+          count++;
+        }
+      }
+    }
+    if (!found) {
+      return false; // No process could be allocated, unsafe state
+    }
+  }
+  return true; // All processes finished, safe state
+};
+
 
 export default function ScenarioDetailPage() {
   const { id } = useParams();
@@ -21,8 +55,121 @@ export default function ScenarioDetailPage() {
   }, [firestore, scenarioId]);
 
   const { data: scenario, isLoading, error } = useDoc<Scenario>(scenarioRef);
+  
+  const [allocation, setAllocation] = useState<number[][]>([]);
+  const [available, setAvailable] = useState<number[]>([]);
+  const [finished, setFinished] = useState<boolean[]>([]);
+  const [simulationLog, setSimulationLog] = useState<string | null>(null);
+  const [simulationStatus, setSimulationStatus] = useState<'safe' | 'unsafe' | 'complete' | null>(null);
+  
+  const originalNeed = useMemo(() => {
+    if (!scenario) return [];
+    return scenario.content.maxMatrix.map((maxRow, i) =>
+        maxRow.row.map((maxVal, j) => maxVal - scenario.content.allocationMatrix[i].row[j])
+    );
+  }, [scenario]);
 
-  if (isLoading) {
+
+  const currentNeed = useMemo(() => {
+    if (!scenario) return [];
+     return scenario.content.maxMatrix.map((maxRow, i) =>
+        maxRow.row.map((maxVal, j) => maxVal - (allocation[i]?.[j] || 0) )
+    );
+  }, [scenario, allocation]);
+
+  const resetSimulation = useCallback(() => {
+    if (scenario) {
+      setAllocation(scenario.content.allocationMatrix.map(item => item.row));
+      setAvailable(scenario.content.initialAvailableResources);
+      setFinished(Array(scenario.content.processes.length).fill(false));
+      setSimulationLog(null);
+      setSimulationStatus(null);
+    }
+  }, [scenario]);
+
+  useEffect(() => {
+    resetSimulation();
+  }, [scenario, resetSimulation]);
+  
+  const handleRequest = (processIndex: number, resourceIndex: number) => {
+    const requestAmount = 1; // Assuming request is always for 1 unit for this game
+    const processNeed = currentNeed[processIndex][resourceIndex];
+    
+    if (processNeed <= 0) {
+        setSimulationStatus('unsafe');
+        setSimulationLog(`P${processIndex} does not need more of R${resourceIndex}.`);
+        return;
+    }
+    if (requestAmount > available[resourceIndex]) {
+      setSimulationStatus('unsafe');
+      setSimulationLog(`Not enough R${resourceIndex} available to grant request for P${processIndex}.`);
+      return;
+    }
+
+    // Tentative allocation
+    const tempAvailable = [...available];
+    const tempAllocation = JSON.parse(JSON.stringify(allocation));
+    const tempNeed = JSON.parse(JSON.stringify(currentNeed));
+
+    tempAvailable[resourceIndex] -= requestAmount;
+    tempAllocation[processIndex][resourceIndex] += requestAmount;
+    tempNeed[processIndex][resourceIndex] -= requestAmount;
+
+    // Check for safety
+    if (isSafe(scenario!.content.processes, tempAvailable, tempAllocation, tempNeed)) {
+      setAvailable(tempAvailable);
+      setAllocation(tempAllocation);
+      setSimulationStatus('safe');
+      setSimulationLog(`Request granted! P${processIndex} acquired R${resourceIndex}. State is SAFE.`);
+
+      // Check if this process is now finished
+      if(tempNeed[processIndex].every(n => n === 0)) {
+          // Release all resources for this process
+          const finalAvailable = tempAvailable.map((avail, i) => avail + tempAllocation[processIndex][i]);
+          setAvailable(finalAvailable);
+          tempAllocation[processIndex] = Array(scenario!.content.resources.length).fill(0);
+          setAllocation(tempAllocation);
+          
+          const newFinished = [...finished];
+          newFinished[processIndex] = true;
+          setFinished(newFinished);
+
+          setSimulationLog(`P${processIndex} has all its resources and has FINISHED! It released its resources.`);
+
+          if(newFinished.every(f => f === true)) {
+              setSimulationStatus('complete');
+              setSimulationLog('Congratulations! All processes have finished. You avoided deadlock!');
+          }
+      }
+      
+    } else {
+      setSimulationStatus('unsafe');
+      setSimulationLog(`DENIED: Granting R${resourceIndex} to P${processIndex} would lead to an UNSAFE state.`);
+    }
+  };
+
+  const handleRelease = (processIndex: number, resourceIndex: number) => {
+     const releaseAmount = 1;
+     if (allocation[processIndex][resourceIndex] < releaseAmount) {
+         setSimulationStatus('unsafe');
+         setSimulationLog(`P${processIndex} cannot release R${resourceIndex} as it doesn't hold enough.`);
+         return;
+     }
+
+     const newAvailable = [...available];
+     const newAllocation = JSON.parse(JSON.stringify(allocation));
+     
+     newAvailable[resourceIndex] += releaseAmount;
+     newAllocation[processIndex][resourceIndex] -= releaseAmount;
+     
+     setAvailable(newAvailable);
+     setAllocation(newAllocation);
+     setSimulationStatus('safe');
+     setSimulationLog(`P${processIndex} released R${resourceIndex}.`);
+  };
+
+
+  if (isLoading || !scenario || allocation.length === 0) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="size-12 animate-spin text-primary" />
@@ -30,7 +177,7 @@ export default function ScenarioDetailPage() {
     );
   }
 
-  if (error || !scenario) {
+  if (error) {
     return (
       <Card className="w-full max-w-lg mx-auto">
         <CardHeader>
@@ -50,13 +197,9 @@ export default function ScenarioDetailPage() {
   }
 
   const { title, description, imageUrl, tags, content } = scenario;
+  const { processes, resources, maxMatrix } = content;
 
-  const allocationData = content.allocationMatrix.map(item => item.row);
-  const maxData = content.maxMatrix.map(item => item.row);
-
-  const needMatrix = maxData.map((maxRow, i) =>
-    maxRow.map((maxVal, j) => maxVal - allocationData[i][j])
-  );
+  const maxData = maxMatrix.map(item => item.row);
 
   return (
     <div className="flex flex-col gap-8">
@@ -87,15 +230,15 @@ export default function ScenarioDetailPage() {
       <div className="grid lg:grid-cols-2 gap-8">
         <Card>
           <CardHeader>
-            <CardTitle>Initial System State</CardTitle>
+            <CardTitle>Current System State</CardTitle>
           </CardHeader>
           <CardContent>
              <h3 className="font-semibold mb-2">Available Resources</h3>
-             <div className="flex gap-2">
-                {content.initialAvailableResources.map((val, i) => (
+             <div className="flex gap-2 font-mono text-xl">
+                {available.map((val, i) => (
                     <div key={i} className="flex flex-col items-center">
-                        <span className="text-xs text-muted-foreground">{content.resources[i]}</span>
-                        <div className="px-4 py-2 bg-secondary rounded-md font-mono font-bold">{val}</div>
+                        <span className="text-xs text-muted-foreground">{resources[i]}</span>
+                        <div className="px-4 py-2 bg-secondary rounded-md font-bold">{val}</div>
                     </div>
                 ))}
              </div>
@@ -104,55 +247,57 @@ export default function ScenarioDetailPage() {
          <Card>
           <CardHeader>
             <CardTitle>Actions</CardTitle>
+            <CardDescription>Request or release resources. Try to get all processes to finish!</CardDescription>
           </CardHeader>
           <CardContent className="flex gap-4">
-             <Button><ShieldCheck className="mr-2"/> Start Simulation</Button>
-             <Button variant="outline">Reset</Button>
+             <Button onClick={resetSimulation} variant="outline"><RefreshCw className="mr-2"/> Reset Simulation</Button>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <MatrixTable title="Allocation" processes={content.processes} resources={content.resources} data={allocationData} />
-          <MatrixTable title="Max Need" processes={content.processes} resources={content.resources} data={maxData} />
-          <MatrixTable title="Calculated Need" processes={content.processes} resources={content.resources} data={needMatrix} />
+       {simulationStatus && (
+        <Alert variant={simulationStatus === 'unsafe' ? 'destructive' : 'default'} className={cn(simulationStatus === 'safe' && 'border-blue-300', simulationStatus === 'complete' && 'bg-green-50 border-green-200')}>
+            {simulationStatus === 'safe' && <ShieldCheck className="h-4 w-4" />}
+            {simulationStatus === 'unsafe' && <AlertTriangle className="h-4 w-4" />}
+            {simulationStatus === 'complete' && <CheckCircle className="h-4 w-4" />}
+            <AlertTitle>
+                {simulationStatus === 'safe' && 'Action Successful'}
+                {simulationStatus === 'unsafe' && 'Action Denied / Unsafe State'}
+                {simulationStatus === 'complete' && 'Scenario Complete!'}
+            </AlertTitle>
+            <AlertDescription>
+                {simulationLog}
+            </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
+          <SimulationMatrixTable
+            title="Current Allocation"
+            processes={processes}
+            resources={resources}
+            data={allocation}
+            finished={finished}
+            onAction={handleRelease}
+            actionType='release'
+            />
+          <SimulationMatrixTable
+            title="Remaining Need"
+            processes={processes}
+            resources={resources}
+            data={currentNeed}
+            finished={finished}
+            onAction={handleRequest}
+            actionType='request'
+            />
+          <Card>
+            <CardHeader><CardTitle>Maximum Need</CardTitle></CardHeader>
+            <CardContent>
+                <SimulationMatrixTable processes={processes} resources={resources} data={maxData} finished={finished} />
+            </CardContent>
+        </Card>
       </div>
 
     </div>
   );
-}
-
-interface MatrixTableProps {
-    title: string;
-    processes: string[];
-    resources: string[];
-    data: number[][];
-}
-
-function MatrixTable({ title, processes, resources, data }: MatrixTableProps) {
-    return (
-        <Card>
-            <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Process</TableHead>
-                            {resources.map(r => <TableHead key={r} className="text-center">{r}</TableHead>)}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {processes.map((p, i) => (
-                            <TableRow key={p}>
-                                <TableCell className="font-medium">{p}</TableCell>
-                                {data[i] && data[i].map((val, j) => (
-                                    <TableCell key={j} className="text-center font-mono">{val}</TableCell>
-                                ))}
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
-    )
 }
