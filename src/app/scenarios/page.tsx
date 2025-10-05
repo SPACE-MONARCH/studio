@@ -16,6 +16,8 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Scenario } from '@/lib/scenarios';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { seedScenarios } from '@/lib/seed';
+import { useState } from 'react';
 
 const iconMap: Record<string, React.ReactNode> = {
   'printer-queue': <Printer className="size-6" />,
@@ -25,13 +27,27 @@ const iconMap: Record<string, React.ReactNode> = {
 
 export default function ScenariosPage() {
   const firestore = useFirestore();
-  
+  const [isSeeding, setIsSeeding] = useState(false);
+
   const scenariosQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'scenarios');
   }, [firestore]);
   
   const { data: scenarios, isLoading, error } = useCollection<Scenario>(scenariosQuery);
+
+  const handleSeed = async () => {
+    if (!firestore) return;
+    setIsSeeding(true);
+    try {
+      await seedScenarios(firestore);
+      // Data will refresh automatically via the useCollection hook
+    } catch (e) {
+      console.error("Error seeding data:", e)
+    } finally {
+      setIsSeeding(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -58,7 +74,24 @@ export default function ScenariosPage() {
         </Alert>
       )}
 
-      {!isLoading && !error && scenarios && (
+      {!isLoading && !error && scenarios && scenarios.length === 0 && (
+         <Card className="text-center">
+            <CardHeader>
+                <CardTitle>No Scenarios Found</CardTitle>
+                <CardDescription>
+                    Your database is currently empty. Click the button below to populate it with the starter scenarios.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button onClick={handleSeed} disabled={isSeeding}>
+                    {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Seed Scenarios
+                </Button>
+            </CardContent>
+        </Card>
+      )}
+
+      {!isLoading && !error && scenarios && scenarios.length > 0 && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {scenarios.map(scenario => (
             <Card
