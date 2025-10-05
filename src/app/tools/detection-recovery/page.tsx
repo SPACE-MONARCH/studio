@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, RefreshCw, Trash2, ShieldCheck, Play, Sparkles, Loader2, Bot } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -270,5 +271,3 @@ export default function DetectionRecoveryPage() {
     </div>
   );
 }
-
-    
