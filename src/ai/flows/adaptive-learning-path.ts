@@ -33,7 +33,7 @@ const AdjustDifficultyOutputSchema = z.object({
     .describe('The suggested difficulty level for the next exercise.'),
   reason: z
     .string()
-    .describe('The reasoning behind the suggested difficulty level.'),
+    .describe('The reasoning behind the suggested difficulty level, explained in an encouraging and educational tone.'),
 });
 export type AdjustDifficultyOutput = z.infer<typeof AdjustDifficultyOutputSchema>;
 
@@ -45,22 +45,24 @@ const adjustDifficultyPrompt = ai.definePrompt({
   name: 'adjustDifficultyPrompt',
   input: {schema: AdjustDifficultyInputSchema},
   output: {schema: AdjustDifficultyOutputSchema},
-  prompt: `You are an adaptive learning system that adjusts the difficulty of exercises based on the user's performance.
+  prompt: `You are an expert, encouraging AI tutor for an operating systems course. Your goal is to create an adaptive learning path by adjusting the difficulty of quiz questions based on the user's performance.
 
-  The user's performance is indicated by the "performance" parameter, which is a decimal between 0 and 1.
-  Current topic is: {{{topic}}}
+  The current topic is: {{{topic}}}
 
-  Here's how to adjust the difficulty:
-  - If the performance is below 0.5, suggest an easier difficulty level.
-  - If the performance is between 0.5 and 0.8, suggest the same difficulty level.
-  - If the performance is above 0.8, suggest a harder difficulty level.
+  Analyze the user's performance on the last question:
+  - Current difficulty: {{{currentDifficulty}}}
+  - Performance score (0.0 to 1.0): {{{performance}}}
 
-  Current difficulty: {{{currentDifficulty}}}
-  Performance: {{{performance}}}
+  Based on the performance, decide the next difficulty level using these rules:
+  - If performance is > 0.8, suggest a harder difficulty.
+  - If performance is between 0.5 and 0.8, suggest the same difficulty.
+  - If performance is < 0.5, suggest an easier difficulty.
 
-  Now, decide what the next difficulty should be, and why.
-  Consider current difficulty, topic, and the user's performance.
+  After deciding the difficulty, provide a concise, educational, and encouraging reason for your choice.
+  For example, if the user did well and you're increasing the difficulty, say something like: "Great job on that question! You've clearly got a good handle on the basics. Let's try something a bit more challenging to really solidify your understanding."
+  If the user struggled and you're decreasing the difficulty, be encouraging: "That was a tricky one! Let's go back to a slightly easier question to reinforce the core concepts before moving on. You've got this!"
 
+  Now, generate the suggested difficulty and your reasoning.
   Ensure the outputted JSON is valid.
   Here is the schema: ${JSON.stringify(AdjustDifficultyOutputSchema.shape)}`,
 });
