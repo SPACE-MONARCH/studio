@@ -104,7 +104,6 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
                     <span>{item.label}</span>
                   </Link>
                 </SidebarMenuButton>
-                {/* Add Submenu rendering if needed */}
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
