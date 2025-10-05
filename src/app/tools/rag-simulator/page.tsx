@@ -30,6 +30,16 @@ interface Edge {
   type: EdgeType;
 }
 
+// Generate a random ID on the client
+const useClientRandomId = () => {
+    const [id, setId] = useState<string | null>(null);
+    useEffect(() => {
+        setId(self.crypto.randomUUID());
+    }, []);
+    return id;
+};
+
+
 export default function RAGSimulatorPage() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -39,11 +49,18 @@ export default function RAGSimulatorPage() {
   const [detectionResult, setDetectionResult] = useState<'deadlock' | 'safe' | null>(null);
   const [isGenerating, setIsGenerating] = useState<false | 'random' | 'deadlocked' | 'safe'>(false);
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    // This effect runs only on the client, after hydration
+    setIsClient(true);
+  }, []);
   
   const processCount = nodes.filter(n => n.type === 'process').length;
   const resourceCount = nodes.filter(n => n.type === 'resource').length;
 
   const addNode = (type: NodeType) => {
+    if (!isClient) return; // Don't run on server
     const label = type === 'process' ? `P${processCount}` : `R${resourceCount}`;
     const newNode: Node = {
       id: self.crypto.randomUUID(),
@@ -55,6 +72,7 @@ export default function RAGSimulatorPage() {
   };
   
   const handleNodeClick = (node: Node) => {
+    if (!isClient) return;
     setDeadlockPath([]);
     setDetectionResult(null);
 
@@ -147,6 +165,7 @@ export default function RAGSimulatorPage() {
   };
   
   const handleGenerateScenario = async (type: 'random' | 'deadlocked' | 'safe') => {
+    if (!isClient) return;
     clearAll();
     setIsGenerating(type);
     try {
@@ -195,7 +214,7 @@ export default function RAGSimulatorPage() {
               </motion.div>
             ))}
             <svg className="absolute top-0 left-0 w-full h-full" style={{ pointerEvents: 'none' }}>
-              {edges.map(edge => {
+              {isClient && edges.map(edge => {
                 const sourceNode = nodes.find(n => n.id === edge.sourceId);
                 const targetNode = nodes.find(n => n.id === edge.targetId);
                 if(!sourceNode || !targetNode) return null;
