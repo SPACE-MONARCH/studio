@@ -50,7 +50,7 @@ export interface Scenario {
       "title": "Manufacturing Assembly Race",
       "description": "Three assembly lines must work together, sharing four robot arms. Can you allocate robot arms to avoid deadlock and keep production humming?",
       "tags": ["Resource Allocation", "Advanced", "Real-World"],
-      "imageUrl": "https://images.unsplash.com/photo-1560962992-6d4b53ef6917?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxhc3NlbWJseSUyMGxpbmV8ZW58MHx8fHwxNzU5OTMxMjA4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://picsum.photos/seed/assembly/1080/720",
       "content": {
         "processes": ["Line 1", "Line 2", "Line 3"],
         "resources": ["Robot Arm A", "Robot Arm B", "Robot Arm C", "Robot Arm D"],
