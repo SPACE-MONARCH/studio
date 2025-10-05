@@ -46,17 +46,12 @@ export default function ScenariosPage() {
       // Data will refresh automatically via the useCollection hook
     } catch (e: any) {
       if (e.code === 'permission-denied') {
-        // Create a rich, contextual error for the developer.
         const permissionError = new FirestorePermissionError({
           path: 'scenarios',
           operation: 'write', // Seeding is a write operation
           requestResourceData: { note: 'Data represents all documents in scenariosSeedData' }
         });
-        
         // Throw the error so the Next.js overlay can catch and display it.
-        // We are not using the emitter here because batch writes don't have a good
-        // global listener pattern like single mutations. Throwing is the most direct
-        // way to get the developer's attention in this case.
         throw permissionError;
       } else {
         console.error("Error seeding data:", e);
@@ -131,7 +126,7 @@ export default function ScenariosPage() {
               </div>
               <CardHeader>
                 <CardTitle>{scenario.title}</CardTitle>
-                <CardDescription>{scenario.description}</CardHeader>
+                <CardDescription>{scenario.description}</CardDescription>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col justify-end">
                 <div className="flex flex-wrap gap-2">
