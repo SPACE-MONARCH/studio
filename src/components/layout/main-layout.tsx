@@ -13,13 +13,15 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
+  SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Header } from './header';
 import { Logo } from '../icons/logo';
-import { BrainCircuit, BotMessageSquare, Puzzle, Home, Wrench, BookOpen } from 'lucide-react';
+import { BrainCircuit, BotMessageSquare, Puzzle, Home, Wrench, BookOpen, ChevronsLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '../ui/button';
+import { useSidebar } from '@/components/ui/sidebar';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
@@ -34,6 +36,21 @@ const navItems = [
   { href: '/adaptive-quiz', label: 'Adaptive Quiz', icon: BrainCircuit },
 ];
 
+function SidebarCollapse() {
+  const { state, toggleSidebar } = useSidebar();
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="size-7 group-data-[collapsible=icon]:rotate-180"
+      onClick={toggleSidebar}
+    >
+      <ChevronsLeft />
+    </Button>
+  );
+}
+
+
 export function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isMobile = useIsMobile();
@@ -45,13 +62,18 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider open={open} onOpenChange={setOpen}>
-      <Sidebar>
+      <Sidebar collapsible="icon">
         <SidebarHeader>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="icon" className="md:hidden">
-                <Link href="/"><Logo className="size-5 text-primary"/></Link>
-            </Button>
-            <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden">Deadlock Defender</span>
+          <div className="flex items-center justify-between">
+             <div className="flex items-center gap-2 group-data-[collapsible=icon]:-ml-1">
+                <Button asChild variant="ghost" size="icon">
+                    <Link href="/"><Logo className="size-5 text-primary"/></Link>
+                </Button>
+                <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden">Deadlock Defender</span>
+            </div>
+            <div className="group-data-[collapsible=icon]:hidden">
+                <SidebarCollapse />
+            </div>
           </div>
         </SidebarHeader>
         <SidebarContent>
@@ -73,9 +95,14 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             ))}
           </SidebarMenu>
         </SidebarContent>
+         <SidebarFooter className="group-data-[collapsible=icon]:hidden">
+            <div className="flex items-center justify-end">
+                <SidebarCollapse />
+            </div>
+        </SidebarFooter>
       </Sidebar>
       <SidebarInset className={cn('transition-[margin] duration-300 ease-in-out',
-        !isMobile && open ? 'md:ml-64' : 'md:ml-12'
+        !isMobile && open ? 'md:ml-64' : 'md:ml-16'
       )}>
         <Header />
         <main className="flex-1 p-4 md:p-6">{children}</main>
