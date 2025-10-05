@@ -13,18 +13,20 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarInset,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Header } from './header';
 import { Logo } from '../icons/logo';
-import { BotMessageSquare, BrainCircuit, BookOpen, ChevronsLeft, Home, Puzzle, SearchCheck, ShieldAlert, Wrench, PanelLeft } from 'lucide-react';
+import { BrainCircuit, BookOpen, ChevronsLeft, Home, Puzzle, Wrench, PanelLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '../ui/button';
 import { useSidebar } from '@/components/ui/sidebar';
-import { RAGIcon } from '../icons/rag-icon';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
@@ -97,29 +99,38 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         <SidebarContent>
           <SidebarMenu>
             {navItems.map(item => (
-               <SidebarMenuItem key={item.href} className="relative">
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname.startsWith(item.href) && (item.href === '/' ? pathname === '/' : true)}
-                  tooltip={{ children: item.label }}
-                >
-                  <Link href={item.href}>
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-                {item.subItems && (
-                  <div className="group-data-[collapsible=icon]:hidden">
-                    <SidebarMenuSub className={cn(pathname.startsWith(item.href) ? 'flex' : 'hidden')}>
+              <SidebarMenuItem key={item.label} className="relative">
+                {item.subItems ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                       <SidebarMenuButton
+                        isActive={pathname.startsWith(item.href)}
+                        tooltip={{ children: item.label }}
+                        className="w-full justify-start"
+                      >
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent side="right" align="start" className="ml-2 group-data-[collapsible=icon]:hidden">
                       {item.subItems.map(subItem => (
-                        <SidebarMenuSubItem key={subItem.href}>
-                          <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
-                            <Link href={subItem.href}>{subItem.label}</Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
+                        <DropdownMenuItem key={subItem.href} asChild>
+                          <Link href={subItem.href}>{subItem.label}</Link>
+                        </DropdownMenuItem>
                       ))}
-                    </SidebarMenuSub>
-                  </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href}
+                    tooltip={{ children: item.label }}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
                 )}
               </SidebarMenuItem>
             ))}
