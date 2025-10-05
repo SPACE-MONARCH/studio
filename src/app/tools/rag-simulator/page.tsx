@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { AlertCircle, Zap, Plus, Circle, Square, Trash2, GitPullRequest, GitCommit, Shuffle } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type NodeType = 'process' | 'resource';
 interface Node {
@@ -26,14 +28,16 @@ interface Edge {
 export default function RAGSimulatorPage() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
-  const [edgeCreation, setEdgeCreation] = useState<{ source: Node | null, type: EdgeType }>({ source: null, type: 'request' });
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [edgeType, setEdgeType] = useState<EdgeType>('request');
   const [deadlockPath, setDeadlockPath] = useState<string[]>([]);
+  const [detectionResult, setDetectionResult] = useState<'deadlock' | 'safe' | null>(null);
   
-  let processCount = nodes.filter(n => n.type === 'process').length;
-  let resourceCount = nodes.filter(n => n.type === 'resource').length;
+  const processCount = nodes.filter(n => n.type === 'process').length;
+  const resourceCount = nodes.filter(n => n.type === 'resource').length;
 
   const addNode = (type: NodeType) => {
-    const label = type === 'process' ? `P${processCount++}` : `R${resourceCount++}`;
+    const label = type === 'process' ? `P${processCount}` : `R${resourceCount}`;
     const newNode: Node = {
       id: self.crypto.randomUUID(),
       type,
@@ -44,87 +48,97 @@ export default function RAGSimulatorPage() {
   };
   
   const handleNodeClick = (node: Node) => {
-    if (!edgeCreation.source) {
-      setEdgeCreation(prev => ({ ...prev, source: node }));
-    } else {
-      if (edgeCreation.source.id === node.id) return;
-      if (edgeCreation.source.type === node.type) return;
+    setDeadlockPath([]);
+    setDetectionResult(null);
 
+    if (!selectedNode) {
+      setSelectedNode(node);
+    } else {
+      if (selectedNode.id === node.id || selectedNode.type === node.type) {
+        setSelectedNode(node); // Reselect the same node or a new node of the same type
+        return;
+      }
+
+      // Determine source and target based on edge type
+      const source = edgeType === 'request' ? (selectedNode.type === 'process' ? selectedNode : node) : (selectedNode.type === 'resource' ? selectedNode : node);
+      const target = edgeType === 'request' ? (node.type === 'resource' ? node : selectedNode) : (node.type === 'process' ? node : selectedNode);
+
+      if ((edgeType === 'request' && (source.type !== 'process' || target.type !== 'resource')) ||
+          (edgeType === 'assignment' && (source.type !== 'resource' || target.type !== 'process'))) {
+        setSelectedNode(null); // Invalid edge type combination
+        return;
+      }
+      
       const newEdge: Edge = {
         id: self.crypto.randomUUID(),
-        sourceId: edgeCreation.type === 'request' ? edgeCreation.source.id : node.id,
-        targetId: edgeCreation.type === 'request' ? node.id : edgeCreation.source.id,
-        type: edgeCreation.type,
+        sourceId: source.id,
+        targetId: target.id,
+        type: edgeType,
       };
       
-      // Ensure request is P -> R and assignment is R -> P
-      const sourceNode = nodes.find(n => n.id === newEdge.sourceId);
-      const targetNode = nodes.find(n => n.id === newEdge.targetId);
-
-      if (newEdge.type === 'request' && (sourceNode?.type !== 'process' || targetNode?.type !== 'resource')) return;
-      if (newEdge.type === 'assignment' && (sourceNode?.type !== 'resource' || targetNode?.type !== 'process')) return;
-      
       setEdges(prev => [...prev, newEdge]);
-      setEdgeCreation({ source: null, type: 'request' });
+      setSelectedNode(null);
     }
   };
 
-  const findDeadlock = () => {
+  const findDeadlock = useCallback(() => {
     const adj: Record<string, string[]> = {};
     nodes.forEach(n => adj[n.id] = []);
-    edges.forEach(e => adj[e.sourceId].push(e.targetId));
+    edges.forEach(e => {
+        if (!adj[e.sourceId]) adj[e.sourceId] = [];
+        adj[e.sourceId].push(e.targetId)
+    });
 
     const visited = new Set<string>();
     const recursionStack = new Set<string>();
-    let cycle: string[] = [];
-
-    function detectCycle(nodeId: string, path: string[]): boolean {
-      visited.add(nodeId);
-      recursionStack.add(nodeId);
-      path.push(nodeId);
-
-      for (const neighbor of adj[nodeId] || []) {
-        if (!visited.has(neighbor)) {
-          if (detectCycle(neighbor, path)) {
-            return true;
-          }
-        } else if (recursionStack.has(neighbor)) {
-          cycle = path.slice(path.indexOf(neighbor));
-          cycle.push(neighbor)
-          return true;
-        }
-      }
-      
-      recursionStack.delete(nodeId);
-      path.pop();
-      return false;
-    }
-
+    
     for (const node of nodes) {
       if (!visited.has(node.id)) {
-        if (detectCycle(node.id, [])) {
+        const cyclePath = detectCycle(node.id, adj, visited, recursionStack);
+        if (cyclePath.length > 0) {
+          const cycleNodeIds = new Set<string>(cyclePath);
           const cycleEdgeIds = new Set<string>();
-          for(let i=0; i < cycle.length-1; i++){
-            const edge = edges.find(e => e.sourceId === cycle[i] && e.targetId === cycle[i+1]);
-            if(edge) cycleEdgeIds.add(edge.id);
+          for(let i=0; i < cyclePath.length -1; i++) {
+              const edge = edges.find(e => e.sourceId === cyclePath[i] && e.targetId === cyclePath[i+1]);
+              if(edge) cycleEdgeIds.add(edge.id);
           }
-          const cycleNodeIds = new Set<string>(cycle);
-          setDeadlockPath([...cycleEdgeIds, ...cycleNodeIds]);
+          setDeadlockPath([...cycleNodeIds, ...cycleEdgeIds]);
+          setDetectionResult('deadlock');
           return;
         }
       }
     }
+
     setDeadlockPath([]);
-  };
+    setDetectionResult('safe');
+  }, [nodes, edges]);
+
+  function detectCycle(nodeId: string, adj: Record<string, string[]>, visited: Set<string>, recursionStack: Set<string>): string[] {
+      visited.add(nodeId);
+      recursionStack.add(nodeId);
+
+      const neighbors = adj[nodeId] || [];
+      for (const neighbor of neighbors) {
+          if (!visited.has(neighbor)) {
+              const cycle = detectCycle(neighbor, adj, visited, recursionStack);
+              if (cycle.length > 0) return [nodeId, ...cycle];
+          } else if (recursionStack.has(neighbor)) {
+              return [nodeId, neighbor];
+          }
+      }
+      recursionStack.delete(nodeId);
+      return [];
+  }
 
   const clearAll = () => {
     setNodes([]);
     setEdges([]);
     setDeadlockPath([]);
-    setEdgeCreation({ source: null, type: 'request' });
+    setSelectedNode(null);
+    setDetectionResult(null);
   };
   
-  const generateRandom = () => {
+  const generateRandomGraph = () => {
     clearAll();
     const newNodes: Node[] = [
       { id: 'p0', type: 'process', label: 'P0', position: { x: 20, y: 20 } },
@@ -136,7 +150,6 @@ export default function RAGSimulatorPage() {
       { id: 'e1', sourceId: 'p0', targetId: 'r0', type: 'request' },
       { id: 'e2', sourceId: 'r0', targetId: 'p1', type: 'assignment' },
       { id: 'e3', sourceId: 'p1', targetId: 'r1', type: 'request' },
-      { id: 'e4', sourceId: 'r1', targetId: 'p0', type: 'assignment' },
     ];
     setNodes(newNodes);
     setEdges(newEdges);
@@ -147,7 +160,7 @@ export default function RAGSimulatorPage() {
       <Card className="lg:col-span-2">
         <CardHeader>
           <CardTitle>Resource Allocation Graph</CardTitle>
-          <CardDescription>Click nodes to create edges. A second click on a different node type completes the edge.</CardDescription>
+          <CardDescription>Click a node to select it, then click another node of a different type to create an edge.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="relative w-full h-[60vh] bg-secondary/30 rounded-lg border border-dashed">
@@ -159,7 +172,7 @@ export default function RAGSimulatorPage() {
                 style={{ top: `${node.position.y}%`, left: `${node.position.x}%`, transform: 'translate(-50%, -50%)' }}
                 onClick={() => handleNodeClick(node)}
               >
-                <NodeComponent node={node} isSelected={edgeCreation.source?.id === node.id} isInDeadlock={deadlockPath.includes(node.id)} />
+                <NodeComponent node={node} isSelected={selectedNode?.id === node.id} isInDeadlock={deadlockPath.includes(node.id)} />
               </motion.div>
             ))}
             <svg className="absolute top-0 left-0 w-full h-full" style={{ pointerEvents: 'none' }}>
@@ -184,23 +197,34 @@ export default function RAGSimulatorPage() {
               <Button onClick={() => addNode('process')}><Plus className="mr-2 h-4 w-4" /> Process</Button>
               <Button onClick={() => addNode('resource')}><Plus className="mr-2 h-4 w-4" /> Resource</Button>
             </div>
-            <RadioGroup value={edgeCreation.type} onValueChange={(v) => setEdgeCreation(prev => ({...prev, type: v as EdgeType}))}>
+            <RadioGroup value={edgeType} onValueChange={(v) => setEdgeType(v as EdgeType)}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="request" id="request" />
-                <Label htmlFor="request" className="flex items-center gap-2"><GitPullRequest className="size-4" /> Request Edge</Label>
+                <Label htmlFor="request" className="flex items-center gap-2"><GitPullRequest className="size-4" /> Request Edge (P → R)</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="assignment" id="assignment" />
-                <Label htmlFor="assignment" className="flex items-center gap-2"><GitCommit className="size-4"/> Assignment Edge</Label>
+                <Label htmlFor="assignment" className="flex items-center gap-2"><GitCommit className="size-4"/> Assignment Edge (R → P)</Label>
               </div>
             </RadioGroup>
+            
             <Button onClick={findDeadlock} className="w-full"><Zap className="mr-2 h-4 w-4" /> Find Deadlock</Button>
-            {deadlockPath.length > 0 && 
-              <div className="text-destructive font-medium text-sm flex items-center gap-2"><AlertCircle className="size-4" /> Deadlock detected!</div>}
+            
             <div className="grid grid-cols-2 gap-2">
-              <Button onClick={generateRandom} variant="secondary" className="w-full"><Shuffle className="mr-2 h-4 w-4" /> Random</Button>
-              <Button onClick={clearAll} variant="destructive" className="w-full"><Trash2 className="mr-2 h-4 w-4" /> Clear</Button>
+                <Button onClick={generateRandomGraph} variant="secondary" className="w-full"><Shuffle className="mr-2 h-4 w-4" /> Random</Button>
+                <Button onClick={clearAll} variant="destructive" className="w-full"><Trash2 className="mr-2 h-4 w-4" /> Clear</Button>
             </div>
+
+            {detectionResult && (
+                 <Alert variant={detectionResult === 'deadlock' ? 'destructive' : 'default'} className={cn(detectionResult === 'safe' && 'border-green-500/50 bg-green-500/10 text-green-700')}>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>{detectionResult === 'deadlock' ? "Deadlock Detected!" : "System is Safe"}</AlertTitle>
+                    <AlertDescription>
+                        {detectionResult === 'deadlock' ? "A cycle was found in the graph, indicating a deadlock." : "No cycles were found. All processes can complete."}
+                    </AlertDescription>
+                </Alert>
+            )}
+
           </CardContent>
         </Card>
       </div>
@@ -210,13 +234,14 @@ export default function RAGSimulatorPage() {
 
 const NodeComponent = ({ node, isSelected, isInDeadlock }: { node: Node, isSelected: boolean, isInDeadlock: boolean }) => {
   const Icon = node.type === 'process' ? Circle : Square;
-  const baseClasses = "flex items-center justify-center size-12 cursor-pointer transition-all";
-  const selectedClasses = isSelected ? "ring-2 ring-offset-2 ring-accent" : "";
-  const deadlockClasses = isInDeadlock ? "bg-destructive text-destructive-foreground" : "bg-card border";
+  const baseClasses = "flex items-center justify-center size-14 cursor-pointer transition-all shadow-md";
+  const selectedClasses = isSelected ? "ring-4 ring-offset-2 ring-accent" : "";
+  const deadlockClasses = isInDeadlock ? "bg-destructive text-destructive-foreground" : "bg-card border-2";
+  const shapeClasses = node.type === 'process' ? 'rounded-full' : 'rounded-md';
 
   return (
-    <div className={`${baseClasses} ${selectedClasses} ${deadlockClasses} ${node.type === 'process' ? 'rounded-full' : 'rounded-md'}`}>
-      <span className="font-mono font-bold">{node.label}</span>
+    <div className={cn(baseClasses, selectedClasses, deadlockClasses, shapeClasses)}>
+      <span className="font-mono font-bold text-lg">{node.label}</span>
     </div>
   );
 };
@@ -227,11 +252,17 @@ const EdgeComponent = ({ edge, source, target, isInDeadlock }: { edge: Edge, sou
     
     // Adjust start/end points to be on the edge of the nodes
     const angle = Math.atan2(target.position.y - source.position.y, target.position.x - source.position.x);
-    const nodeSize = 30; // Approx radius of the node visuals in pixels
-    const sourceX = source.position.x + (nodeSize / 10) * Math.cos(angle);
-    const sourceY = source.position.y + (nodeSize / 10) * Math.sin(angle);
-    const targetX = target.position.x - (nodeSize / 10) * Math.cos(angle);
-    const targetY = target.position.y - (nodeSize / 10) * Math.sin(angle);
+    const nodeSize = 35; // Approx radius of the node visuals in pixels (half of size-14)
+
+    const svgContainer = source.position.x < target.position.x ? source : target;
+    const parent = document.querySelector('.relative.w-full.h-\\[60vh\\]');
+    const parentWidth = parent?.clientWidth || 1;
+    const parentHeight = parent?.clientHeight || 1;
+
+    const sourceX = (source.position.x / 100) * parentWidth + (nodeSize * Math.cos(angle));
+    const sourceY = (source.position.y / 100) * parentHeight + (nodeSize * Math.sin(angle));
+    const targetX = (target.position.x / 100) * parentWidth - (nodeSize * Math.cos(angle));
+    const targetY = (target.position.y / 100) * parentHeight - (nodeSize * Math.sin(angle));
 
   return (
     <>
@@ -241,12 +272,12 @@ const EdgeComponent = ({ edge, source, target, isInDeadlock }: { edge: Edge, sou
         </marker>
       </defs>
       <line
-        x1={`${sourceX}%`} y1={`${sourceY}%`}
-        x2={`${targetX}%`} y2={`${targetY}%`}
+        x1={sourceX} y1={sourceY}
+        x2={targetX} y2={targetY}
         stroke={isInDeadlock ? 'hsl(var(--destructive))' : 'currentColor'}
         strokeWidth="2"
         markerEnd={`url(#${markerId})`}
-        strokeDasharray={isRequest ? "5,5" : "none"}
+        strokeDasharray={isRequest ? "6,6" : "none"}
       />
     </>
   );
