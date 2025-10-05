@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Header } from './header';
 import { Logo } from '../icons/logo';
-import { BotMessageSquare, BrainCircuit, BookOpen, ChevronsLeft, Home, Puzzle, SearchCheck, ShieldAlert, Wrench } from 'lucide-react';
+import { BotMessageSquare, BrainCircuit, BookOpen, ChevronsLeft, Home, Puzzle, SearchCheck, ShieldAlert, Wrench, PanelLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '../ui/button';
@@ -52,15 +52,15 @@ const navItems = [
 ];
 
 function SidebarCollapse() {
-  const { toggleSidebar } = useSidebar();
+  const { open, toggleSidebar } = useSidebar();
   return (
     <Button
       variant="ghost"
       size="icon"
-      className="size-7 group-data-[collapsible=icon]:rotate-180"
+      className="size-7"
       onClick={toggleSidebar}
     >
-      <ChevronsLeft />
+      { open ? <ChevronsLeft /> : <PanelLeft /> }
     </Button>
   );
 }
@@ -79,7 +79,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 group-data-[collapsible=icon]:-ml-1 group-data-[collapsible=icon]:hidden">
+            <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
               <Button asChild variant="ghost" size="icon">
                 <Link href="/">
                   <Logo className="size-5 text-primary" />
@@ -88,6 +88,9 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
               <span className="font-semibold text-lg">
                 Deadlock Defender
               </span>
+            </div>
+             <div className='hidden md:block'>
+              <SidebarCollapse />
             </div>
           </div>
         </SidebarHeader>
@@ -122,11 +125,6 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             ))}
           </SidebarMenu>
         </SidebarContent>
-        {/* <SidebarFooter className="group-data-[collapsible=icon]:hidden">
-          <div className="flex items-center justify-end">
-            <SidebarCollapse />
-          </div>
-        </SidebarFooter> */}
       </Sidebar>
       <SidebarInset
         className={cn(

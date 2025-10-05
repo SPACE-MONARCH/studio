@@ -18,11 +18,11 @@ import { ThemeToggle } from '@/components/theme-toggle';
 export function Header() {
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 md:hidden">
         <SidebarTrigger />
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <Logo className="h-6 w-6 text-primary" />
-          <span className="hidden sm:inline-block">Deadlock Defender</span>
+          <span className="sm:inline-block">Deadlock Defender</span>
         </Link>
       </div>
 
