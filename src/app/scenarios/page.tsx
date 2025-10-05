@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Database, Printer, Loader2 } from 'lucide-react';
-import { useCollection, useFirestore } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Scenario } from '@/lib/scenarios';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -25,7 +25,12 @@ const iconMap: Record<string, React.ReactNode> = {
 
 export default function ScenariosPage() {
   const firestore = useFirestore();
-  const scenariosQuery = collection(firestore, 'scenarios');
+  
+  const scenariosQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'scenarios');
+  }, [firestore]);
+  
   const { data: scenarios, isLoading, error } = useCollection<Scenario>(scenariosQuery);
 
   return (
