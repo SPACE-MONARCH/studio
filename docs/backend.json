@@ -36,8 +36,8 @@
           "properties": {
             "processes": { "type": "array", "items": { "type": "string" } },
             "resources": { "type": "array", "items": { "type": "string" } },
-            "allocationMatrix": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } },
-            "maxMatrix": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } },
+            "allocationMatrix": { "type": "array", "items": { "type": "object", "properties": { "row": { "type": "array", "items": { "type": "number" } } } } },
+            "maxMatrix": { "type": "array", "items": { "type": "object", "properties": { "row": { "type": "array", "items": { "type": "number" } } } } },
             "initialAvailableResources": { "type": "array", "items": { "type": "number" } },
             "objective": { "type": "string" }
           },

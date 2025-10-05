@@ -1,6 +1,6 @@
 'use client';
 import { useParams } from 'next/navigation';
-import { useDoc, useFirestore } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Scenario } from '@/lib/scenarios';
 import Image from 'next/image';
@@ -15,7 +15,11 @@ export default function ScenarioDetailPage() {
   const scenarioId = Array.isArray(id) ? id[0] : id;
 
   const firestore = useFirestore();
-  const scenarioRef = doc(firestore, 'scenarios', scenarioId);
+  const scenarioRef = useMemoFirebase(() => {
+    if (!firestore || !scenarioId) return null;
+    return doc(firestore, 'scenarios', scenarioId);
+  }, [firestore, scenarioId]);
+
   const { data: scenario, isLoading, error } = useDoc<Scenario>(scenarioRef);
 
   if (isLoading) {
@@ -47,8 +51,11 @@ export default function ScenarioDetailPage() {
 
   const { title, description, imageUrl, tags, content } = scenario;
 
-  const needMatrix = content.maxMatrix.map((maxRow, i) =>
-    maxRow.map((maxVal, j) => maxVal - content.allocationMatrix[i][j])
+  const allocationData = content.allocationMatrix.map(item => item.row);
+  const maxData = content.maxMatrix.map(item => item.row);
+
+  const needMatrix = maxData.map((maxRow, i) =>
+    maxRow.map((maxVal, j) => maxVal - allocationData[i][j])
   );
 
   return (
@@ -106,8 +113,8 @@ export default function ScenarioDetailPage() {
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <MatrixTable title="Allocation" processes={content.processes} resources={content.resources} data={content.allocationMatrix} />
-          <MatrixTable title="Max Need" processes={content.processes} resources={content.resources} data={content.maxMatrix} />
+          <MatrixTable title="Allocation" processes={content.processes} resources={content.resources} data={allocationData} />
+          <MatrixTable title="Max Need" processes={content.processes} resources={content.resources} data={maxData} />
           <MatrixTable title="Calculated Need" processes={content.processes} resources={content.resources} data={needMatrix} />
       </div>
 
@@ -138,7 +145,7 @@ function MatrixTable({ title, processes, resources, data }: MatrixTableProps) {
                         {processes.map((p, i) => (
                             <TableRow key={p}>
                                 <TableCell className="font-medium">{p}</TableCell>
-                                {data[i].map((val, j) => (
+                                {data[i] && data[i].map((val, j) => (
                                     <TableCell key={j} className="text-center font-mono">{val}</TableCell>
                                 ))}
                             </TableRow>

@@ -86,7 +86,7 @@ export default function BankersAlgorithmPage() {
     const allocation = form.getValues('allocation');
     const max = form.getValues('max');
     return Array(p).fill(0).map((_, i) =>
-      Array(r).fill(0).map((__, j) => max[i][j] - allocation[i][j])
+      Array(r).fill(0).map((__, j) => (max[i]?.[j] || 0) - (allocation[i]?.[j] || 0))
     );
   }, [p, r, form.watch('allocation'), form.watch('max')]);
 
@@ -308,7 +308,7 @@ const MatrixInput = ({ title, rows, form, name }: any) => (
         <div key={row.id} className="flex gap-2 items-center">
           <span className="w-8 font-mono">P{i}</span>
           {Object.keys(row).filter(k => k !== 'id').map((_, j) => (
-            <FormField key={`${row.id}-${j}`} control={form.control} name={`${name}.${i}.${j}`} render={({ field }) => (
+             <FormField key={`${row.id}-${j}`} control={form.control} name={`${name}.${i}.${j}`} render={({ field }) => (
               <FormItem><FormControl><Input {...field} /></FormControl></FormItem>
             )} />
           ))}

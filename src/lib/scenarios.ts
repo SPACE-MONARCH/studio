@@ -7,8 +7,8 @@ export interface Scenario {
     content: {
       processes: string[];
       resources: string[];
-      allocationMatrix: number[][];
-      maxMatrix: number[][];
+      allocationMatrix: { row: number[] }[];
+      maxMatrix: { row: number[] }[];
       initialAvailableResources: number[];
       objective: string;
     }
@@ -24,8 +24,8 @@ export interface Scenario {
       "content": {
         "processes": ["Dept A", "Dept B"],
         "resources": ["Printer 1", "Scanner 1"],
-        "allocationMatrix": [[1,0], [0,1]],
-        "maxMatrix": [[1,1], [1,1]],
+        "allocationMatrix": [{ "row": [1,0] }, { "row": [0,1] }],
+        "maxMatrix": [{ "row": [1,1] }, { "row": [1,1] }],
         "initialAvailableResources": [0,0],
         "objective": "A deadlock has occurred. Identify the circular wait and determine a recovery strategy."
       }
@@ -39,8 +39,8 @@ export interface Scenario {
       "content": {
         "processes": ["T1", "T2", "T3"],
         "resources": ["Table A", "Table B", "Table C"],
-        "allocationMatrix": [[1,0,0], [0,1,0], [0,0,1]],
-        "maxMatrix": [[1,1,0], [0,1,1], [1,0,1]],
+        "allocationMatrix": [{ "row": [1,0,0] }, { "row": [0,1,0] }, { "row": [0,0,1] }],
+        "maxMatrix": [{ "row": [1,1,0] }, { "row": [0,1,1] }, { "row": [1,0,1] }],
         "initialAvailableResources": [0,0,0],
         "objective": "Analyze the resource graph to find the cycle and determine which process to terminate to break the deadlock."
       }
@@ -54,8 +54,8 @@ export interface Scenario {
       "content": {
         "processes": ["Client 1", "Client 2", "Client 3", "Client 4"],
         "resources": ["Loan A", "Loan B", "Loan C"],
-        "allocationMatrix": [[0,1,0], [2,0,0], [3,0,2], [2,1,1]],
-        "maxMatrix": [[7,5,3], [3,2,2], [9,0,2], [4,2,2]],
+        "allocationMatrix": [{ "row": [0,1,0] }, { "row": [2,0,0] }, { "row": [3,0,2] }, { "row": [2,1,1] }],
+        "maxMatrix": [{ "row": [7,5,3] }, { "row": [3,2,2] }, { "row": [9,0,2] }, { "row": [4,2,2] }],
         "initialAvailableResources": [3,3,2],
         "objective": "A new request arrives from Client 2 for [1,0,2]. Determine if granting this request will lead to an unsafe state using the Banker's algorithm."
       }
