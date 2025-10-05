@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -39,10 +40,10 @@ export default function AdaptiveQuizPage() {
     if (!selectedOption) return;
 
     setIsSubmitting(true);
+    setResult(null); // Clear previous result before new submission
     setAiResponse(null);
 
     const isCorrect = selectedOption === questions[currentDifficulty].answer;
-    setResult(isCorrect ? 'correct' : 'incorrect');
     const performance = isCorrect ? 0.9 : 0.4; // Simulate high/low performance
 
     try {
@@ -57,6 +58,8 @@ export default function AdaptiveQuizPage() {
       console.error('AI difficulty adjustment failed:', error);
       // Handle error in UI if necessary
     } finally {
+      // We set the result *after* the AI call to show them together
+      setResult(isCorrect ? 'correct' : 'incorrect');
       setIsSubmitting(false);
     }
   };
@@ -70,6 +73,8 @@ export default function AdaptiveQuizPage() {
 
   const question = questions[currentDifficulty];
 
+  const showResult = result !== null;
+
   return (
     <div className="max-w-2xl mx-auto">
       <Card>
@@ -80,7 +85,7 @@ export default function AdaptiveQuizPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {!result ? (
+          {!showResult ? (
             <div>
               <p className="font-medium mb-4">{question.text}</p>
               <RadioGroup onValueChange={setSelectedOption} value={selectedOption ?? undefined}>
@@ -99,7 +104,7 @@ export default function AdaptiveQuizPage() {
               </h3>
               {result === 'incorrect' && <p>The correct answer was: <strong>{question.answer}</strong></p>}
               
-              {isSubmitting && (
+              {isSubmitting && !aiResponse && (
                  <div className="flex items-center text-muted-foreground">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     AI is analyzing your performance...
@@ -109,7 +114,7 @@ export default function AdaptiveQuizPage() {
               {aiResponse && (
                 <Card className="bg-primary/5">
                   <CardHeader className="flex-row items-start gap-4 space-y-0">
-                     {aiResponse.suggestedDifficulty > currentDifficulty ? <TrendingUp className="size-6 text-primary" /> : <TrendingDown className="size-6 text-primary" />}
+                     {aiResponse.suggestedDifficulty > currentDifficulty ? <TrendingUp className="size-6 text-primary" /> : aiResponse.suggestedDifficulty < currentDifficulty ? <TrendingDown className="size-6 text-primary" /> : <ArrowRight className="size-6 text-primary"/>}
                      <div>
                         <CardTitle className="text-base">AI Feedback</CardTitle>
                         <CardDescription>{aiResponse.reason}</CardDescription>
@@ -127,14 +132,14 @@ export default function AdaptiveQuizPage() {
           )}
         </CardContent>
         <CardFooter>
-          {!result ? (
+          {!showResult ? (
             <Button onClick={handleQuizSubmit} disabled={!selectedOption || isSubmitting}>
               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Submit
             </Button>
           ) : (
-            <Button onClick={handleNextQuestion} disabled={!aiResponse}>
-              Next Question <ArrowRight className="ml-2 h-4 w-4" />
+            <Button onClick={handleNextQuestion} disabled={!aiResponse && isSubmitting}>
+               {isSubmitting && !aiResponse ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <>Next Question <ArrowRight className="ml-2 h-4 w-4" /></> }
             </Button>
           )}
         </CardFooter>

@@ -42,7 +42,7 @@ export default function DetectionRecoveryPage() {
   const [detectionResult, setDetectionResult] = useState<{ deadlockedProcesses: string[] } | null>(null);
   const [recoveryLog, setRecoveryLog] = useState<string[]>([]);
   const [score, setScore] = useState(100);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGenerating, setIsGenerating] = useState<false | 'random' | 'deadlocked' | 'safe'>(false);
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
 
   const updateSystemState = (output: GenerateDeadlockScenarioOutput) => {
@@ -62,7 +62,7 @@ export default function DetectionRecoveryPage() {
   };
 
   const handleGenerateScenario = async (type: 'random' | 'deadlocked' | 'safe') => {
-    setIsGenerating(true);
+    setIsGenerating(type);
     setAiExplanation(null);
     try {
       const result = await generateDeadlockScenario({ type });
@@ -163,16 +163,16 @@ export default function DetectionRecoveryPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-            <Button onClick={() => handleGenerateScenario('random')} disabled={isGenerating}>
-              {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+            <Button onClick={() => handleGenerateScenario('random')} disabled={!!isGenerating}>
+              {isGenerating === 'random' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
               Generate Random
             </Button>
-            <Button onClick={() => handleGenerateScenario('deadlocked')} disabled={isGenerating}>
-              {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <AlertCircle className="mr-2 h-4 w-4" />}
+            <Button onClick={() => handleGenerateScenario('deadlocked')} disabled={!!isGenerating}>
+              {isGenerating === 'deadlocked' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <AlertCircle className="mr-2 h-4 w-4" />}
               Generate Guaranteed Deadlock
             </Button>
-            <Button onClick={() => handleGenerateScenario('safe')} disabled={isGenerating}>
-              {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+            <Button onClick={() => handleGenerateScenario('safe')} disabled={!!isGenerating}>
+              {isGenerating === 'safe' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
               Generate Safe State
             </Button>
         </CardContent>
