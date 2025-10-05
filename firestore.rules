@@ -1,34 +1,37 @@
 /**
- * @file Firestore Security Rules for Deadlock Avoidance Scenarios.
+ * @fileoverview Firestore Security Rules for Deadlock Defender App
  *
  * Core Philosophy:
- * This ruleset allows public read access to all scenarios, making them available for learning purposes. Write access is completely disallowed, preventing unauthorized modifications.
+ * This ruleset allows public read access to scenarios while restricting write access.
  *
  * Data Structure:
- * All scenario data is stored in the top-level `/scenarios/{scenarioId}` collection.
+ * - /scenarios/{scenarioId}: Stores individual scenario data.
  *
  * Key Security Decisions:
- * - Public read access is granted to the `/scenarios` collection to allow all users to access learning materials.
- * - All write operations (create, update, delete) are strictly denied on the `/scenarios` collection to prevent unauthorized data modification.
+ * - Anonymous authentication is used.
+ * - Public read access to scenarios is enabled.
+ * - Write access to scenarios is disallowed for all users in the prototype.
+ *
+ * Access Control Patterns:
+ * - Scenarios: Public Read with Owner-Only Writes (emulated by denying all writes in this prototype).
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows public read access to scenario data. Denies all writes.
+     * @description Controls access to the /scenarios/{scenarioId} collection.
      * @path /scenarios/{scenarioId}
      * @allow (get, list): Any user can read scenario data.
-     * @deny (create, update, delete): No user can create, update, or delete scenario data.
-     * @principle Allows public read access while preventing unauthorized data modifications.
+     * @deny (create, update, delete): No user can create, update, or delete scenario data in this prototype.
+     * @principle Public read, restricted writes.
      */
     match /scenarios/{scenarioId} {
       allow get: if true;
       allow list: if true;
 
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      // CRITICAL: Writes are disallowed in this prototype.
+      allow create, update, delete: if false;
     }
   }
 }
